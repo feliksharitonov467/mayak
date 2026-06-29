@@ -232,8 +232,23 @@
   .task.is-done .tcheck { background: var(--teal); border-color: var(--teal); color: #06241d; }
   .task.is-done .tx { text-decoration: line-through; color: var(--text-dim); }
   .task .tag { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
-  .task .x { color: var(--text-faint); cursor: pointer; font-size: 13px; }
+  .task .tmove { display: flex; gap: 2px; flex: none; }
+  .task .marrow {
+    width: 24px; height: 24px; border: 1px solid var(--line); background: var(--ink-soft);
+    color: var(--text-dim); border-radius: 6px; cursor: pointer; font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center; font-family: inherit;
+    transition: .12s; padding: 0;
+  }
+  .task .marrow:hover:not(:disabled) { border-color: var(--amber-soft); color: var(--amber); }
+  .task .marrow:active:not(:disabled) { transform: scale(.9); }
+  .task .marrow:disabled { opacity: .25; cursor: default; }
+  .task .x { color: var(--text-faint); cursor: pointer; font-size: 13px; margin-top: 4px; }
   .task .x:hover { color: var(--rose); }
+  /* arrows are the primary mover on touch screens; show them a bit larger there */
+  @media (max-width: 820px) {
+    .task .marrow { width: 30px; height: 30px; font-size: 19px; }
+    .task { gap: 9px; }
+  }
   .col-add { display: flex; gap: 6px; margin-top: 4px; }
   .log-badge { background: var(--panel-2); color: var(--amber); font-size: 11px; font-weight: 700; padding: 1px 7px; border-radius: 99px; margin-left: 2px; }
   .log-badge:empty { display: none; }
@@ -798,6 +813,15 @@ function addTask(col, input) {
 }
 function delTask(id){ data.tasks=data.tasks.filter(t=>t.id!==id); save(); renderTasks(); renderLogbook(); }
 function moveTask(id, col){ const t=data.tasks.find(x=>x.id===id); if(t&&t.col!==col){ t.col=col; if(col==='done') t.doneAt=Date.now(); else delete t.doneAt; save(); renderTasks(); renderLogbook(); } }
+// step a task one column left/right (mobile-friendly, no dragging needed)
+function stepTask(id, dir){
+  const t = data.tasks.find(x=>x.id===id); if(!t) return;
+  const order = COLS.map(c=>c.id);
+  const i = order.indexOf(t.col);
+  const ni = i + dir;
+  if(ni < 0 || ni >= order.length) return;
+  moveTask(id, order[ni]);
+}
 function toggleTaskDone(id){
   const t = data.tasks.find(x=>x.id===id); if(!t) return;
   if(t.col==='done'){ t.col = t.prevCol || 'todo'; delete t.doneAt; }
@@ -821,11 +845,19 @@ function renderTasks() {
     return `<div class="col" data-col="${c.id}">
       <div class="col-title"><span class="dot" style="background:${c.color}"></span>${c.title} <span style="margin-left:auto;color:var(--text-faint)">${items.length}</span></div>
       ${note}
-      ${items.map(t=>`<div class="task ${c.id==='done'?'is-done':''}" draggable="true" data-id="${t.id}">
+      ${items.map((t,idx)=>{
+        const order = COLS.map(c=>c.id);
+        const ci = order.indexOf(c.id);
+        const canLeft = ci > 0, canRight = ci < order.length-1;
+        return `<div class="task ${c.id==='done'?'is-done':''}" draggable="true" data-id="${t.id}">
         <div class="tcheck" onclick="toggleTaskDone('${t.id}')">✓</div>
         <div class="tx">${esc(t.txt)}</div>
+        <div class="tmove">
+          <button class="marrow" ${canLeft?'':'disabled'} onclick="stepTask('${t.id}',-1)" title="Левее">‹</button>
+          <button class="marrow" ${canRight?'':'disabled'} onclick="stepTask('${t.id}',1)" title="Правее">›</button>
+        </div>
         <span class="x" onclick="delTask('${t.id}')">✕</span>
-      </div>`).join('')}
+      </div>`;}).join('')}
       <div class="col-add"><input type="text" placeholder="+ задача" onkeydown="if(event.key==='Enter'){addTask('${c.id}',this); this.value='';}"></div>
     </div>`;
   }).join('');
@@ -881,6 +913,7 @@ function plural(n,one,few,many){
 let dragId = null;
 function attachDnD() {
   document.querySelectorAll('.task').forEach(t => {
+    // desktop mouse drag
     t.addEventListener('dragstart', e => { dragId = t.dataset.id; t.classList.add('dragging'); });
     t.addEventListener('dragend', () => { t.classList.remove('dragging'); document.querySelectorAll('.col').forEach(c=>c.classList.remove('dragover')); });
   });
@@ -888,6 +921,51 @@ function attachDnD() {
     col.addEventListener('dragover', e => { e.preventDefault(); col.classList.add('dragover'); });
     col.addEventListener('dragleave', () => col.classList.remove('dragover'));
     col.addEventListener('drop', e => { e.preventDefault(); if(dragId) moveTask(dragId, col.dataset.col); dragId=null; });
+  });
+  attachTouchDrag();
+}
+
+// Touch drag for phones — HTML5 drag events don't fire on touch, so we emulate.
+function attachTouchDrag() {
+  let tId = null, longPress = null, dragging = false, ghost = null;
+  document.querySelectorAll('.task').forEach(t => {
+    t.addEventListener('touchstart', e => {
+      // ignore touches that start on a button (check, arrows, delete)
+      if (e.target.closest('button, .tcheck, .x')) return;
+      const touch = e.touches[0];
+      const startX = touch.clientX, startY = touch.clientY;
+      // require a short hold so normal scrolling still works
+      longPress = setTimeout(() => {
+        dragging = true; tId = t.dataset.id; t.classList.add('dragging');
+        ghost = t.cloneNode(true);
+        ghost.style.cssText = 'position:fixed;z-index:200;pointer-events:none;opacity:.9;width:'+t.offsetWidth+'px;left:'+startX+'px;top:'+startY+'px;transform:translate(-50%,-50%)';
+        document.body.appendChild(ghost);
+        if (navigator.vibrate) navigator.vibrate(10);
+      }, 220);
+    }, {passive:true});
+
+    t.addEventListener('touchmove', e => {
+      if (!dragging) { clearTimeout(longPress); return; }
+      e.preventDefault();
+      const touch = e.touches[0];
+      if (ghost){ ghost.style.left = touch.clientX+'px'; ghost.style.top = touch.clientY+'px'; }
+      document.querySelectorAll('.col').forEach(c=>c.classList.remove('dragover'));
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const col = el && el.closest('.col');
+      if (col) col.classList.add('dragover');
+    }, {passive:false});
+
+    t.addEventListener('touchend', e => {
+      clearTimeout(longPress);
+      if (!dragging) return;
+      const touch = e.changedTouches[0];
+      const el = document.elementFromPoint(touch.clientX, touch.clientY);
+      const col = el && el.closest('.col');
+      if (col && tId) moveTask(tId, col.dataset.col);
+      dragging = false; tId = null;
+      if (ghost){ ghost.remove(); ghost = null; }
+      document.querySelectorAll('.col').forEach(c=>c.classList.remove('dragover'));
+    });
   });
 }
 
