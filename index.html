@@ -358,6 +358,8 @@
   .wheel-meta .wm .n { font-family: Georgia, serif; font-size: 26px; color: var(--amber); line-height: 1; }
   .wheel-meta .wm .l { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
   .wheel-meta .wm.urgent .n { color: var(--rose); }
+  .wheel-meta .wm-edit { color: var(--amber); cursor: pointer; border-bottom: 1px dotted var(--amber-soft); }
+  .wheel-meta .wm-edit:hover { filter: brightness(1.1); }
 
   .sphere-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 16px; margin-bottom: 12px; }
   .sphere-head { display: flex; align-items: center; gap: 10px; }
@@ -817,6 +819,21 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('newwheel-modal')">Отмена</button>
       <button class="btn btn-primary" onclick="confirmNewWheel()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit deadline modal -->
+<div class="modal-bg" id="deadline-modal">
+  <div class="modal">
+    <h3 class="display">Срок колеса</h3>
+    <label class="fld"><span>Дата, к которой хочешь подтянуть сферы</span><input type="date" id="dl-input"></label>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-ghost btn-sm" onclick="clearDeadline()">Убрать срок</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="closeModal('deadline-modal')">Отмена</button>
+        <button class="btn btn-primary" onclick="saveDeadline()">Сохранить</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1429,10 +1446,19 @@ function renderWheel(){
   document.getElementById('wheel-sub').textContent =
     `средняя оценка ${tot.avgScore}/10 · прогресс целей ${tot.pct}%`;
 
+  const dlCard = dl!==null
+    ? `<div class="wm ${dl<7?'urgent':''}">
+         <div class="n">${dl<0?'!':dl}</div>
+         <div class="l">${dl<0?'срок прошёл':'дней до срока'} · <span class="wm-edit" onclick="editDeadline()">изменить</span></div>
+       </div>`
+    : `<div class="wm">
+         <div class="n" style="font-size:18px;color:var(--text-dim)">—</div>
+         <div class="l">срок не задан · <span class="wm-edit" onclick="editDeadline()">поставить</span></div>
+       </div>`;
   const meta = `<div class="wheel-meta">
     <div class="wm"><div class="n">${tot.avgScore}</div><div class="l">средняя оценка из 10</div></div>
     <div class="wm"><div class="n">${tot.pct}%</div><div class="l">целей выполнено (${tot.done}/${tot.total})</div></div>
-    ${dl!==null ? `<div class="wm ${dl<7?'urgent':''}"><div class="n">${dl<0?'!':dl}</div><div class="l">${dl<0?'срок прошёл':'дней до срока'}</div></div>` : ''}
+    ${dlCard}
   </div>`;
 
   const spheresHtml = w.spheres.map((s,i)=>{
@@ -1593,6 +1619,24 @@ function saveSphere(){
 }
 
 // --- new wheel / archive ---
+function editDeadline(){
+  if(!data.wheel) return;
+  document.getElementById('dl-input').value = data.wheel.deadline || '';
+  document.getElementById('deadline-modal').classList.add('open');
+}
+function saveDeadline(){
+  if(!data.wheel) return;
+  data.wheel.deadline = document.getElementById('dl-input').value || '';
+  save(); closeModal('deadline-modal'); renderWheel(); renderOverview();
+  toast(data.wheel.deadline ? 'Срок обновлён' : 'Срок убран');
+}
+function clearDeadline(){
+  if(!data.wheel) return;
+  data.wheel.deadline = '';
+  save(); closeModal('deadline-modal'); renderWheel(); renderOverview();
+  toast('Срок убран');
+}
+
 function openNewWheel(){
   document.getElementById('nw-deadline').value = data.wheel ? (data.wheel.deadline||'') : '';
   document.getElementById('newwheel-note').textContent = data.wheel
