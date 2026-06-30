@@ -345,6 +345,57 @@
   }
   .bin-list .empty-mini { color: var(--text-faint); font-size: 13px; text-align: center; padding: 20px; }
 
+  /* ---------- Wheel of Life ---------- */
+  .wheel-top { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 26px; }
+  .wheel-canvas-wrap { flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .wheel-svg { width: 340px; height: 340px; max-width: 86vw; }
+  .wheel-seg { cursor: pointer; transition: opacity .15s; }
+  .wheel-seg:hover { opacity: .85; }
+  .wheel-label { font-size: 10px; fill: var(--text-dim); pointer-events: none; }
+  .wheel-side { flex: 1; min-width: 260px; }
+  .wheel-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
+  .wheel-meta .wm { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; flex: 1; min-width: 120px; }
+  .wheel-meta .wm .n { font-family: Georgia, serif; font-size: 26px; color: var(--amber); line-height: 1; }
+  .wheel-meta .wm .l { font-size: 12px; color: var(--text-dim); margin-top: 5px; }
+  .wheel-meta .wm.urgent .n { color: var(--rose); }
+
+  .sphere-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px 16px; margin-bottom: 12px; }
+  .sphere-head { display: flex; align-items: center; gap: 10px; }
+  .sphere-dot { width: 12px; height: 12px; border-radius: 99px; flex: none; }
+  .sphere-head h3 { font-size: 15.5px; font-weight: 600; flex: 1; }
+  .sphere-head .sc-score { font-family: Georgia, serif; font-size: 20px; color: var(--amber); }
+  .sphere-head .sc-score small { font-size: 12px; color: var(--text-faint); }
+  .score-row { display: flex; align-items: center; gap: 4px; margin: 12px 0 6px; }
+  .score-pip {
+    flex: 1; height: 22px; border-radius: 5px; background: var(--ink-soft); border: 1px solid var(--line);
+    cursor: pointer; transition: .1s; font-size: 0;
+  }
+  .score-pip.on { border-color: transparent; }
+  .score-pip:hover { transform: translateY(-2px); }
+  .sphere-goals { margin-top: 12px; display: flex; flex-direction: column; gap: 2px; }
+  .sphere-goals .sg {
+    display: flex; align-items: center; gap: 9px; padding: 6px 7px; border-radius: 7px; font-size: 13.5px;
+  }
+  .sphere-goals .sg:hover { background: var(--panel-2); }
+  .sphere-goals .sg .gcheck {
+    width: 17px; height: 17px; flex: none; border: 2px solid var(--line); border-radius: 5px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; font-size: 10px; color: transparent;
+  }
+  .sphere-goals .sg.done .gcheck { background: var(--teal); border-color: var(--teal); color: #06241d; }
+  .sphere-goals .sg.done .gtx { color: var(--text-faint); text-decoration: line-through; }
+  .sphere-goals .sg .gtx { flex: 1; }
+  .sphere-goals .sg.proj .gtx { color: var(--text); }
+  .sphere-goals .sg .gtag { font-size: 10px; color: var(--violet); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; }
+  .sphere-progress { margin-top: 12px; }
+  .sphere-progress .sp-lbl { font-size: 11.5px; color: var(--text-dim); margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .sphere-foot { display: flex; gap: 6px; margin-top: 12px; }
+  .fld-lbl { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 8px; }
+  .sph-goals-edit { margin-bottom: 14px; }
+  #sph-goals .sgd { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13.5px; }
+  #sph-goals .sgd .x { color: var(--text-faint); cursor: pointer; margin-left: auto; }
+  #sph-goals .sgd .x:hover { color: var(--rose); }
+  .wheel-empty-cta { text-align: center; }
+
   /* ---------- Inputs ---------- */
   input[type=text], input[type=date], select, textarea {
     background: var(--ink-soft); border: 1px solid var(--line); color: var(--text);
@@ -428,10 +479,10 @@
       background: rgba(14,23,38,.95); backdrop-filter: blur(12px); border-top: 1px solid var(--line);
     }
     .mobile-tabs button {
-      flex: 1; background: none; border: none; color: var(--text-faint); padding: 10px 4px 14px;
-      font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: inherit;
+      flex: 1; background: none; border: none; color: var(--text-faint); padding: 9px 2px 13px;
+      font-size: 9px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: inherit;
     }
-    .mobile-tabs button .ic { font-size: 19px; }
+    .mobile-tabs button .ic { font-size: 17px; }
     .mobile-tabs button.active { color: var(--amber); }
     .topbar .clock { display: none; }
   }
@@ -492,6 +543,7 @@
     <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
     <button data-view="projects"><span class="ic">▤</span> Проекты</button>
     <button data-view="habits"><span class="ic">✦</span> Привычки</button>
+    <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
     <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
     <div class="navlabel">Данные</div>
@@ -509,6 +561,7 @@
         </div>
       </div>
       <div class="stat-grid" id="stat-grid"></div>
+      <div id="overview-wheel"></div>
       <div class="chart-wrap">
         <h3>Привычки за последние 7 дней</h3>
         <div class="chartbars" id="weekchart"></div>
@@ -609,6 +662,32 @@
         </div>
       </div>
     </section>
+
+    <!-- WHEEL OF LIFE -->
+    <section class="view" id="view-wheel">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Колесо жизни</h2>
+          <p id="wheel-sub">Оцени сферы и двигай их вверх</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost btn-sm" onclick="switchView('wheelArchive')">📓 Прошлые <span id="wheelarch-count" class="log-badge"></span></button>
+      </div>
+      <div id="wheel-body"></div>
+    </section>
+
+    <!-- WHEEL ARCHIVE -->
+    <section class="view" id="view-wheelArchive">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Прошлые колёса</h2>
+          <p>Как менялись твои оценки со временем</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="switchView('wheel')">← К колесу</button>
+      </div>
+      <div id="wheelarch-list"></div>
+    </section>
   </main>
 </div>
 
@@ -616,6 +695,7 @@
   <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
   <button data-view="projects"><span class="ic">▤</span> Проекты</button>
   <button data-view="habits"><span class="ic">✦</span> Привычки</button>
+  <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
   <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
   <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
 </nav>
@@ -667,18 +747,52 @@
   </div>
 </div>
 
+<!-- Sphere edit modal -->
+<div class="modal-bg" id="sphere-modal">
+  <div class="modal">
+    <h3 class="display" id="sphere-modal-title">Сфера</h3>
+    <label class="fld"><span>Название сферы</span><input type="text" id="sph-name" placeholder="Например, Здоровье"></label>
+    <label class="fld"><span>Привязать проект (необязательно)</span>
+      <select id="sph-project"><option value="">— без проекта —</option></select>
+    </label>
+    <div class="sph-goals-edit">
+      <span class="fld-lbl">Цели в этой сфере</span>
+      <div id="sph-goals"></div>
+      <div class="ms-add"><input type="text" id="sph-goal-input" placeholder="Добавить цель и нажать Enter"
+        onkeydown="if(event.key==='Enter'){addSphereGoalDraft(this);this.value='';}"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('sphere-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveSphere()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- New wheel modal -->
+<div class="modal-bg" id="newwheel-modal">
+  <div class="modal">
+    <h3 class="display">Новое колесо</h3>
+    <p style="color:var(--text-dim);font-size:13.5px;margin-bottom:16px" id="newwheel-note">Создаст свежее колесо с 8 базовыми сферами.</p>
+    <label class="fld"><span>Дедлайн (необязательно)</span><input type="date" id="nw-deadline"></label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('newwheel-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="confirmNewWheel()">Создать</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], habits: [], tasks: [], dump: [], created: Date.now() };
+let data = { projects: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const todayKey = () => new Date().toISOString().slice(0,10);
 
-function blankData(){ return { projects: [], habits: [], tasks: [], dump: [], created: Date.now() }; }
+function blankData(){ return { projects: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -731,6 +845,8 @@ window.onAuthChange = async function(user) {
       const remote = await window.FB.loadData(user.uid);
       data = remote && remote.projects ? remote : blankData();
       if (!Array.isArray(data.dump)) data.dump = []; // backfill for older saves
+      if (!Array.isArray(data.wheelArchive)) data.wheelArchive = [];
+      if (typeof data.wheel === 'undefined') data.wheel = null;
     } catch (e) {
       console.error(e); toast('Не удалось загрузить данные'); data = blankData();
     }
@@ -766,13 +882,15 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============ NAV ============ */
 function switchView(v) {
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
-  const navMatch = v === 'logbook' ? 'tasks' : v; // logbook keeps Tasks tab highlighted
+  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v;
   document.querySelectorAll('nav.side button[data-view], .mobile-tabs button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === navMatch));
   if (v === 'overview') renderOverview();
   if (v === 'logbook') renderLogbook();
   if (v === 'tasks') renderTasks();
   if (v === 'dump') renderDump();
+  if (v === 'wheel') renderWheel();
+  if (v === 'wheelArchive') renderWheelArchive();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
@@ -1114,6 +1232,294 @@ function burnBin(){
     toast('Сожжено. Голова чище 🌬');
   }, 1400);
 }
+
+/* ============ WHEEL OF LIFE ============ */
+const WHEEL_COLORS = ['#f6b34b','#5ad1b8','#f0788a','#9d8df1','#5aa9f6','#f6d44b','#7ad15a','#f68f4b','#c45af6','#4bd9f6','#f64b7a','#8af65a'];
+const DEFAULT_SPHERES = ['Здоровье','Карьера','Финансы','Отношения','Личностный рост','Отдых','Окружение','Духовность'];
+
+function sphereColor(i){ return WHEEL_COLORS[i % WHEEL_COLORS.length]; }
+function scoreColor(v){ // 1..10 → red→amber→green
+  if(v<=3) return '#f0788a';
+  if(v<=6) return '#f6b34b';
+  return '#5ad1b8';
+}
+function newSphere(name){ return { id: uid(), name, score: 5, goals: [], projectId: '' }; }
+
+function ensureWheel(){
+  if(!data.wheel){
+    data.wheel = { id: uid(), deadline: '', created: Date.now(),
+      spheres: DEFAULT_SPHERES.map(n=>newSphere(n)) };
+  }
+  return data.wheel;
+}
+
+// progress of a sphere = combined completion of its own goals + linked project milestones
+function sphereProgress(s){
+  let total=0, done=0;
+  (s.goals||[]).forEach(g=>{ total++; if(g.done) done++; });
+  if(s.projectId){
+    const p = data.projects.find(x=>x.id===s.projectId);
+    if(p){ p.milestones.forEach(m=>{ total++; if(m.done) done++; }); }
+  }
+  return { total, done, pct: total? Math.round(done/total*100) : 0 };
+}
+function wheelTotals(w){
+  let total=0, done=0;
+  w.spheres.forEach(s=>{ const p=sphereProgress(s); total+=p.total; done+=p.done; });
+  const avgScore = w.spheres.length ? (w.spheres.reduce((a,s)=>a+s.score,0)/w.spheres.length) : 0;
+  return { total, done, pct: total?Math.round(done/total*100):0, avgScore: Math.round(avgScore*10)/10 };
+}
+function daysLeft(deadline){
+  if(!deadline) return null;
+  const d = new Date(deadline+'T23:59:59'); const now = new Date();
+  return Math.ceil((d-now)/86400000);
+}
+
+function renderWheel(){
+  const body = document.getElementById('wheel-body');
+  const archBadge = document.getElementById('wheelarch-count');
+  if(archBadge) archBadge.textContent = (data.wheelArchive||[]).length || '';
+
+  if(!data.wheel){
+    body.innerHTML = `<div class="empty wheel-empty-cta">
+      <div class="big">◍</div>
+      <p>Колесо жизни — быстрый срез: насколько ты доволен каждой сферой,<br>и что сделать, чтобы поднять оценку.</p>
+      <button class="btn btn-primary" onclick="openNewWheel()">Создать колесо</button>
+    </div>`;
+    document.getElementById('wheel-sub').textContent = 'Оцени сферы и двигай их вверх';
+    return;
+  }
+  const w = data.wheel;
+  const tot = wheelTotals(w);
+  const dl = daysLeft(w.deadline);
+
+  document.getElementById('wheel-sub').textContent =
+    `средняя оценка ${tot.avgScore}/10 · прогресс целей ${tot.pct}%`;
+
+  const meta = `<div class="wheel-meta">
+    <div class="wm"><div class="n">${tot.avgScore}</div><div class="l">средняя оценка из 10</div></div>
+    <div class="wm"><div class="n">${tot.pct}%</div><div class="l">целей выполнено (${tot.done}/${tot.total})</div></div>
+    ${dl!==null ? `<div class="wm ${dl<7?'urgent':''}"><div class="n">${dl<0?'!':dl}</div><div class="l">${dl<0?'срок прошёл':'дней до срока'}</div></div>` : ''}
+  </div>`;
+
+  const spheresHtml = w.spheres.map((s,i)=>{
+    const col = sphereColor(i);
+    const prog = sphereProgress(s);
+    const linkedProj = s.projectId ? data.projects.find(p=>p.id===s.projectId) : null;
+    const pips = Array.from({length:10},(_,k)=>{
+      const v=k+1; const on=v<=s.score;
+      return `<div class="score-pip ${on?'on':''}" onclick="setSphereScore('${s.id}',${v})"
+        style="${on?`background:${scoreColor(s.score)};`:''}" title="${v}">${v}</div>`;
+    }).join('');
+    const goalsHtml = (s.goals||[]).map(g=>`<div class="sg ${g.done?'done':''}">
+      <div class="gcheck" onclick="toggleSphereGoal('${s.id}','${g.id}')">✓</div>
+      <div class="gtx">${esc(g.txt)}</div>
+    </div>`).join('');
+    const projHtml = linkedProj ? `<div class="sg proj">
+      <div class="gcheck ${projectPct(linkedProj)===100?'':''}" style="cursor:default;${projectPct(linkedProj)===100?'background:var(--teal);border-color:var(--teal);color:#06241d':''}">${projectPct(linkedProj)===100?'✓':''}</div>
+      <div class="gtx">${esc(linkedProj.name)}</div>
+      <span class="gtag">проект ${projectPct(linkedProj)}%</span>
+    </div>` : '';
+    return `<div class="sphere-card">
+      <div class="sphere-head">
+        <span class="sphere-dot" style="background:${col}"></span>
+        <h3>${esc(s.name)}</h3>
+        <span class="sc-score">${s.score}<small>/10</small></span>
+      </div>
+      <div class="score-row">${pips}</div>
+      <div class="sphere-goals">${projHtml}${goalsHtml || (!linkedProj?'<div style="font-size:12.5px;color:var(--text-faint);padding:4px 7px">целей пока нет</div>':'')}</div>
+      ${prog.total ? `<div class="sphere-progress">
+        <div class="sp-lbl"><span>прогресс целей</span><span>${prog.done}/${prog.total}</span></div>
+        <div class="bar teal"><i style="width:${prog.pct}%"></i></div>
+      </div>`:''}
+      <div class="sphere-foot">
+        <button class="btn btn-ghost btn-sm" onclick="openSphere('${s.id}')">Изменить</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteSphere('${s.id}')">Удалить</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML = `<div class="wheel-top">
+      <div class="wheel-canvas-wrap">
+        ${wheelSvg(w)}
+        <button class="btn btn-ghost btn-sm" onclick="openNewWheel()">↻ Начать новое колесо</button>
+      </div>
+      <div class="wheel-side">
+        ${meta}
+        <button class="btn btn-primary btn-sm" onclick="openSphere(null)">+ Добавить сферу</button>
+      </div>
+    </div>
+    <div>${spheresHtml}</div>`;
+}
+
+function wheelSvg(w){
+  const n = w.spheres.length;
+  if(!n) return '<div class="empty" style="width:300px">Нет сфер</div>';
+  const cx=170, cy=170, R=140;
+  const step = 2*Math.PI/n;
+  let segs='', labels='', rings='';
+  // background rings
+  for(let r=1;r<=10;r++){
+    rings += `<circle cx="${cx}" cy="${cy}" r="${R*r/10}" fill="none" stroke="#2e3f60" stroke-width="${r===10?1.4:0.6}" opacity="0.5"/>`;
+  }
+  w.spheres.forEach((s,i)=>{
+    const a0 = -Math.PI/2 + i*step;
+    const a1 = a0 + step;
+    const rr = R * s.score/10;
+    const x0=cx+rr*Math.cos(a0), y0=cy+rr*Math.sin(a0);
+    const x1=cx+rr*Math.cos(a1), y1=cy+rr*Math.sin(a1);
+    const large = step>Math.PI?1:0;
+    const col = sphereColor(i);
+    segs += `<path class="wheel-seg" onclick="openSphere('${s.id}')"
+      d="M${cx},${cy} L${x0.toFixed(1)},${y0.toFixed(1)} A${rr.toFixed(1)},${rr.toFixed(1)} 0 ${large} 1 ${x1.toFixed(1)},${y1.toFixed(1)} Z"
+      fill="${col}" fill-opacity="0.8" stroke="${col}" stroke-width="1"/>`;
+    // label at mid angle, just outside ring
+    const am=(a0+a1)/2; const lr=R+14;
+    const lx=cx+lr*Math.cos(am), ly=cy+lr*Math.sin(am);
+    const anchor = Math.cos(am)>0.3?'start':Math.cos(am)<-0.3?'end':'middle';
+    const short = s.name.length>11?s.name.slice(0,10)+'…':s.name;
+    labels += `<text class="wheel-label" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle">${esc(short)}</text>`;
+  });
+  // spokes
+  let spokes='';
+  for(let i=0;i<n;i++){
+    const a=-Math.PI/2+i*step;
+    spokes+=`<line x1="${cx}" y1="${cy}" x2="${(cx+R*Math.cos(a)).toFixed(1)}" y2="${(cy+R*Math.sin(a)).toFixed(1)}" stroke="#2e3f60" stroke-width="0.6" opacity="0.6"/>`;
+  }
+  return `<svg class="wheel-svg" viewBox="0 0 340 340">${rings}${segs}${spokes}<circle cx="${cx}" cy="${cy}" r="3" fill="#2e3f60"/>${labels}</svg>`;
+}
+
+function setSphereScore(sid, v){
+  const s = data.wheel.spheres.find(x=>x.id===sid); if(!s) return;
+  s.score = (s.score===v)? v : v; // tap value sets it
+  save(); renderWheel();
+}
+function toggleSphereGoal(sid, gid){
+  const s = data.wheel.spheres.find(x=>x.id===sid); if(!s) return;
+  const g = s.goals.find(x=>x.id===gid); if(!g) return;
+  g.done=!g.done; save(); renderWheel();
+}
+function deleteSphere(sid){
+  const s = data.wheel.spheres.find(x=>x.id===sid); if(!s) return;
+  if(!confirm(`Удалить сферу «${s.name}»?`)) return;
+  data.wheel.spheres = data.wheel.spheres.filter(x=>x.id!==sid);
+  save(); renderWheel();
+}
+
+// --- sphere edit modal ---
+let sphereDraft = null;
+function openSphere(sid){
+  ensureWheel();
+  if(sid){
+    const s = data.wheel.spheres.find(x=>x.id===sid);
+    sphereDraft = { id:s.id, name:s.name, projectId:s.projectId||'', goals: s.goals.map(g=>({...g})) };
+    document.getElementById('sphere-modal-title').textContent = 'Изменить сферу';
+  } else {
+    sphereDraft = { id:null, name:'', projectId:'', goals:[] };
+    document.getElementById('sphere-modal-title').textContent = 'Новая сфера';
+  }
+  document.getElementById('sph-name').value = sphereDraft.name;
+  // populate project dropdown
+  const sel = document.getElementById('sph-project');
+  sel.innerHTML = '<option value="">— без проекта —</option>' +
+    data.projects.map(p=>`<option value="${p.id}" ${sphereDraft.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  renderSphereGoalsDraft();
+  document.getElementById('sphere-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('sph-name').focus(),50);
+}
+function renderSphereGoalsDraft(){
+  const box = document.getElementById('sph-goals');
+  box.innerHTML = sphereDraft.goals.map((g,i)=>`<div class="sgd">
+    <span>• ${esc(g.txt)}</span><span class="x" onclick="removeSphereGoalDraft(${i})">✕</span>
+  </div>`).join('');
+}
+function addSphereGoalDraft(input){
+  const t=input.value.trim(); if(!t) return;
+  sphereDraft.goals.push({ id: uid(), txt:t, done:false });
+  renderSphereGoalsDraft();
+}
+function removeSphereGoalDraft(i){ sphereDraft.goals.splice(i,1); renderSphereGoalsDraft(); }
+function saveSphere(){
+  const name = document.getElementById('sph-name').value.trim();
+  if(!name){ toast('Впиши название сферы'); return; }
+  sphereDraft.name = name;
+  sphereDraft.projectId = document.getElementById('sph-project').value;
+  ensureWheel();
+  if(sphereDraft.id){
+    const s = data.wheel.spheres.find(x=>x.id===sphereDraft.id);
+    s.name=sphereDraft.name; s.projectId=sphereDraft.projectId; s.goals=sphereDraft.goals;
+  } else {
+    const s = newSphere(sphereDraft.name);
+    s.projectId=sphereDraft.projectId; s.goals=sphereDraft.goals;
+    data.wheel.spheres.push(s);
+  }
+  save(); closeModal('sphere-modal'); renderWheel();
+}
+
+// --- new wheel / archive ---
+function openNewWheel(){
+  document.getElementById('nw-deadline').value = data.wheel ? (data.wheel.deadline||'') : '';
+  document.getElementById('newwheel-note').textContent = data.wheel
+    ? 'Текущее колесо отправится в «Прошлые», а новое создастся с теми же сферами (оценки сбросятся к 5, цели снимутся).'
+    : 'Создаст свежее колесо с 8 базовыми сферами.';
+  document.getElementById('newwheel-modal').classList.add('open');
+}
+function confirmNewWheel(){
+  const deadline = document.getElementById('nw-deadline').value;
+  if(data.wheel){
+    // archive snapshot
+    const snap = JSON.parse(JSON.stringify(data.wheel));
+    snap.archivedAt = Date.now();
+    snap.totals = wheelTotals(data.wheel);
+    data.wheelArchive = data.wheelArchive||[];
+    data.wheelArchive.push(snap);
+    // carry over sphere names/structure, reset scores+goals
+    const carried = data.wheel.spheres.map(s=>{
+      const ns = newSphere(s.name); ns.projectId = s.projectId||'';
+      ns.goals = (s.goals||[]).map(g=>({ id:uid(), txt:g.txt, done:false }));
+      return ns;
+    });
+    data.wheel = { id: uid(), deadline, created: Date.now(), spheres: carried };
+  } else {
+    data.wheel = { id: uid(), deadline, created: Date.now(), spheres: DEFAULT_SPHERES.map(n=>newSphere(n)) };
+  }
+  save(); closeModal('newwheel-modal'); renderWheel();
+  toast('Новое колесо готово');
+}
+
+function renderWheelArchive(){
+  const wrap = document.getElementById('wheelarch-list');
+  const arch = data.wheelArchive||[];
+  if(!arch.length){
+    wrap.innerHTML = `<div class="empty"><div class="big">📓</div><p>Здесь будут прошлые колёса.<br>Когда начнёшь новое — текущее сохранится сюда.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = arch.slice().reverse().map(w=>{
+    const d = new Date(w.archivedAt||w.created);
+    const t = w.totals || wheelTotals(w);
+    return `<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+        ${wheelSvgMini(w)}
+        <div style="flex:1;min-width:180px">
+          <h3 style="font-size:16px;margin-bottom:6px">Колесо от ${d.toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})}</h3>
+          <div style="font-size:13px;color:var(--text-dim)">средняя оценка ${t.avgScore}/10 · целей ${t.pct}%</div>
+          <div style="font-size:12.5px;color:var(--text-faint);margin-top:8px">${w.spheres.map(s=>`${esc(s.name)}: ${s.score}`).join(' · ')}</div>
+        </div>
+        <button class="icon-btn" onclick="deleteArchivedWheel('${w.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function wheelSvgMini(w){
+  // reuse wheelSvg but smaller via wrapper
+  return `<div style="width:120px;height:120px;flex:none">${wheelSvg(w).replace('class="wheel-svg"','style="width:120px;height:120px"')}</div>`;
+}
+function deleteArchivedWheel(id){
+  if(!confirm('Удалить это колесо из истории?')) return;
+  data.wheelArchive = (data.wheelArchive||[]).filter(w=>w.id!==id);
+  save(); renderWheelArchive();
+}
+
 let dragId = null;
 function attachDnD() {
   document.querySelectorAll('.task').forEach(t => {
@@ -1206,9 +1612,29 @@ function renderOverview() {
       <div class="cbl">${WD[(d.getDay()+6)%7]}</div>
     </div>`;
   }).join('');
-}
 
-/* ============ EXPORT / IMPORT ============ */
+  // wheel mini-summary on overview
+  const ow = document.getElementById('overview-wheel');
+  if(ow){
+    if(data.wheel){
+      const t = wheelTotals(data.wheel);
+      const dl = daysLeft(data.wheel.deadline);
+      ow.innerHTML = `<div class="chart-wrap" style="margin-bottom:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;cursor:pointer" onclick="switchView('wheel')">
+        <div style="width:130px;height:130px;flex:none">${wheelSvg(data.wheel).replace('class="wheel-svg"','style="width:130px;height:130px"')}</div>
+        <div style="flex:1;min-width:160px">
+          <h3 style="margin-bottom:8px">Колесо жизни</h3>
+          <div style="font-size:13.5px;color:var(--text-dim)">средняя оценка <b style="color:var(--amber)">${t.avgScore}/10</b> · целей выполнено ${t.pct}%${dl!==null?` · ${dl<0?'срок прошёл':dl+' дн. до срока'}`:''}</div>
+          <div style="font-size:12.5px;color:var(--text-faint);margin-top:10px">нажми, чтобы открыть колесо →</div>
+        </div>
+      </div>`;
+    } else {
+      ow.innerHTML = `<div class="chart-wrap" style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+        <div><h3 style="margin-bottom:4px">Колесо жизни</h3><div style="font-size:13px;color:var(--text-dim)">Оцени сферы жизни и поставь цели для роста</div></div>
+        <button class="btn btn-primary btn-sm" onclick="switchView('wheel')">Создать колесо</button>
+      </div>`;
+    }
+  }
+}
 function exportData() {
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
   const a = document.createElement('a');
@@ -1234,7 +1660,7 @@ document.getElementById('import-file').addEventListener('change', e => {
 /* ============ UTIL ============ */
 function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderOverview(); }
+function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderWheel(); renderOverview(); }
 
 /* clock */
 function tickClock(){
