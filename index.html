@@ -289,6 +289,62 @@
   .cb .cbl { font-size: 11px; color: var(--text-dim); }
   .cb .cval { font-size: 12px; color: var(--text-faint); }
 
+  /* ---------- Dump / Bin ---------- */
+  .dump-stage { max-width: 560px; margin: 0 auto; }
+  .dump-input-row { display: flex; gap: 10px; align-items: stretch; margin-bottom: 38px; }
+  #dump-input { resize: none; line-height: 1.45; }
+  .dump-throw { flex: none; align-self: stretch; }
+  .bin-area { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .bin {
+    position: relative; width: 150px; height: 165px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform .15s;
+  }
+  .bin:active { transform: scale(.97); }
+  .bin.shake { animation: binShake .4s ease; }
+  @keyframes binShake {
+    0%,100%{transform:translateX(0)} 20%{transform:translateX(-5px)}
+    40%{transform:translateX(5px)} 60%{transform:translateX(-3px)} 80%{transform:translateX(3px)}
+  }
+  .bin-svg { width: 150px; height: 165px; display: block; }
+  #bin-lid { transform-origin: 24px 24px; transition: transform .25s ease; }
+  .bin.open #bin-lid { transform: rotate(-22deg) translateX(-3px); }
+  .bin-count {
+    position: absolute; top: 64px; left: 0; right: 0; text-align: center;
+    font-family: Georgia, serif; font-size: 30px; color: var(--amber); pointer-events: none;
+    text-shadow: 0 1px 4px rgba(0,0,0,.4);
+  }
+  .bin-hint { font-size: 13px; color: var(--text-faint); }
+  .dump-actions { display: flex; gap: 10px; justify-content: center; margin-top: 22px; min-height: 36px; }
+  .dump-burn { background: linear-gradient(90deg,#d8542e,#f6953b); color: #fff; }
+  .dump-burn:hover { filter: brightness(1.07); }
+
+  /* flying note animation */
+  .fly-note {
+    position: fixed; z-index: 120; background: var(--amber); color: #2a1c05;
+    padding: 10px 14px; border-radius: 9px; font-size: 13px; max-width: 230px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4); pointer-events: none;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+
+  /* fire on burn */
+  .fire { position: absolute; bottom: 26px; left: 0; right: 0; height: 0; pointer-events: none; }
+  .fire.lit::before, .fire.lit::after {
+    content: ''; position: absolute; left: 50%; bottom: 0; width: 26px; height: 46px;
+    background: radial-gradient(circle at 50% 80%, #ffe07a, #f6953b 45%, #d8542e 75%, transparent 80%);
+    border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; transform: translateX(-50%);
+    animation: flame .5s ease-in-out infinite alternate; filter: blur(1px);
+  }
+  .fire.lit::after { width: 16px; height: 60px; opacity: .8; animation-duration: .35s; }
+  @keyframes flame { from { transform: translateX(-50%) scaleY(.85) } to { transform: translateX(-55%) scaleY(1.12) } }
+
+  .bin-list { max-height: 320px; overflow-y: auto; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .bin-list .bnote {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 9px;
+    padding: 10px 12px; font-size: 13.5px; color: var(--text-dim); white-space: pre-wrap; word-break: break-word;
+  }
+  .bin-list .empty-mini { color: var(--text-faint); font-size: 13px; text-align: center; padding: 20px; }
+
   /* ---------- Inputs ---------- */
   input[type=text], input[type=date], select, textarea {
     background: var(--ink-soft); border: 1px solid var(--line); color: var(--text);
@@ -437,6 +493,7 @@
     <button data-view="projects"><span class="ic">▤</span> Проекты</button>
     <button data-view="habits"><span class="ic">✦</span> Привычки</button>
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
+    <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
     <div class="navlabel">Данные</div>
     <button data-action="export"><span class="ic">⇩</span> Сохранить копию</button>
     <button data-action="import"><span class="ic">⇧</span> Загрузить копию</button>
@@ -509,6 +566,49 @@
       </div>
       <div id="logbook-list"></div>
     </section>
+
+    <!-- DUMP / BRAIN DUMP -->
+    <section class="view" id="view-dump">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Ведро</h2>
+          <p>Выкинь из головы всё, что накопилось — и забудь</p>
+        </div>
+      </div>
+
+      <div class="dump-stage">
+        <div class="dump-input-row">
+          <textarea id="dump-input" rows="2" placeholder="Что крутится в голове? Напиши и выброси…"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();throwThought();}"></textarea>
+          <button class="btn btn-primary dump-throw" onclick="throwThought()">Выбросить</button>
+        </div>
+
+        <div class="bin-area">
+          <div class="bin" id="bin" onclick="switchBinOpen()">
+            <svg viewBox="0 0 120 130" class="bin-svg">
+              <!-- lid -->
+              <g id="bin-lid">
+                <rect x="18" y="20" width="84" height="12" rx="4" fill="#2e3f60"/>
+                <rect x="50" y="12" width="20" height="9" rx="3" fill="#2e3f60"/>
+              </g>
+              <!-- body -->
+              <path d="M26 34 L94 34 L88 120 Q87 126 81 126 L39 126 Q33 126 32 120 Z" fill="#233252" stroke="#2e3f60" stroke-width="2"/>
+              <line x1="46" y1="46" x2="49" y2="114" stroke="#2e3f60" stroke-width="3" stroke-linecap="round"/>
+              <line x1="60" y1="46" x2="60" y2="114" stroke="#2e3f60" stroke-width="3" stroke-linecap="round"/>
+              <line x1="74" y1="46" x2="71" y2="114" stroke="#2e3f60" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <div class="bin-count" id="bin-count">0</div>
+            <div class="fire" id="fire"></div>
+          </div>
+          <div class="bin-hint" id="bin-hint">в ведре пока пусто</div>
+        </div>
+
+        <div class="dump-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openBinList()" id="peek-btn" style="display:none">Заглянуть в ведро</button>
+          <button class="btn btn-sm dump-burn" onclick="burnBin()" id="burn-btn" style="display:none">🔥 Сжечь всё</button>
+        </div>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -517,6 +617,7 @@
   <button data-view="projects"><span class="ic">▤</span> Проекты</button>
   <button data-view="habits"><span class="ic">✦</span> Привычки</button>
   <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
+  <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
 </nav>
 </div><!-- /app-wrap -->
 
@@ -553,18 +654,31 @@
 </div>
 
 <input type="file" id="import-file" accept="application/json" style="display:none">
+
+<!-- Bin contents modal -->
+<div class="modal-bg" id="bin-modal">
+  <div class="modal">
+    <h3 class="display">В ведре</h3>
+    <div id="bin-list" class="bin-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('bin-modal')">Закрыть</button>
+      <button class="btn dump-burn" onclick="burnBin()">🔥 Сжечь всё</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], habits: [], tasks: [], created: Date.now() };
+let data = { projects: [], habits: [], tasks: [], dump: [], created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const todayKey = () => new Date().toISOString().slice(0,10);
 
-function blankData(){ return { projects: [], habits: [], tasks: [], created: Date.now() }; }
+function blankData(){ return { projects: [], habits: [], tasks: [], dump: [], created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -616,6 +730,7 @@ window.onAuthChange = async function(user) {
     try {
       const remote = await window.FB.loadData(user.uid);
       data = remote && remote.projects ? remote : blankData();
+      if (!Array.isArray(data.dump)) data.dump = []; // backfill for older saves
     } catch (e) {
       console.error(e); toast('Не удалось загрузить данные'); data = blankData();
     }
@@ -657,6 +772,7 @@ function switchView(v) {
   if (v === 'overview') renderOverview();
   if (v === 'logbook') renderLogbook();
   if (v === 'tasks') renderTasks();
+  if (v === 'dump') renderDump();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
@@ -910,6 +1026,94 @@ function plural(n,one,few,many){
   if(m10>=2&&m10<=4&&(m100<10||m100>=20)) return few;
   return many;
 }
+
+/* ============ DUMP / BIN ============ */
+function renderDump(){
+  const n = (data.dump||[]).length;
+  const cnt = document.getElementById('bin-count');
+  const hint = document.getElementById('bin-hint');
+  const burn = document.getElementById('burn-btn');
+  const peek = document.getElementById('peek-btn');
+  if(cnt) cnt.textContent = n;
+  if(hint) hint.textContent = n ? `накопилось: ${n} ${plural(n,'мысль','мысли','мыслей')}` : 'в ведре пока пусто';
+  if(burn) burn.style.display = n ? '' : 'none';
+  if(peek) peek.style.display = n ? '' : 'none';
+}
+
+function throwThought(){
+  const ta = document.getElementById('dump-input');
+  const txt = ta.value.trim();
+  if(!txt) return;
+
+  // fly animation: a note travels from the textarea to the bin
+  const taRect = ta.getBoundingClientRect();
+  const bin = document.getElementById('bin');
+  const binRect = bin.getBoundingClientRect();
+  const note = document.createElement('div');
+  note.className = 'fly-note';
+  note.textContent = txt.length>40 ? txt.slice(0,40)+'…' : txt;
+  note.style.left = (taRect.left + 20) + 'px';
+  note.style.top  = (taRect.top + 14) + 'px';
+  document.body.appendChild(note);
+
+  const targetX = binRect.left + binRect.width/2 - 40;
+  const targetY = binRect.top + binRect.height/2 - 30;
+  // animate with Web Animations API: arc into the bin, shrink, fade
+  note.animate([
+    { transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 1 },
+    { transform: `translate(${(targetX-taRect.left-20)*0.5}px, ${(targetY-taRect.top-14)-70}px) scale(.9) rotate(-8deg)`, opacity: 1, offset: .5 },
+    { transform: `translate(${targetX-taRect.left-20}px, ${targetY-taRect.top-14}px) scale(.2) rotate(20deg)`, opacity: .2 }
+  ], { duration: 620, easing: 'cubic-bezier(.5,-0.2,.7,1)' }).onfinish = () => {
+    note.remove();
+    bin.classList.add('open');
+    bin.classList.remove('shake'); void bin.offsetWidth; bin.classList.add('shake');
+    setTimeout(()=>bin.classList.remove('open'), 350);
+    // store and update count after it "lands"
+    if(!Array.isArray(data.dump)) data.dump = [];
+    data.dump.push({ id: uid(), txt, at: Date.now() });
+    save(); renderDump();
+  };
+
+  ta.value=''; ta.focus();
+}
+
+function switchBinOpen(){
+  // tapping the bin peeks inside if there's something
+  if((data.dump||[]).length) openBinList();
+}
+
+function openBinList(){
+  const list = document.getElementById('bin-list');
+  const items = data.dump||[];
+  list.innerHTML = items.length
+    ? items.slice().reverse().map(d=>`<div class="bnote">${esc(d.txt)}</div>`).join('')
+    : `<div class="empty-mini">Пусто</div>`;
+  document.getElementById('bin-modal').classList.add('open');
+}
+
+function burnBin(){
+  const n = (data.dump||[]).length;
+  if(!n){ toast('Ведро уже пустое'); return; }
+  if(!confirm(`Сжечь всё навсегда? (${n} ${plural(n,'запись','записи','записей')}) Это нельзя отменить.`)) return;
+
+  closeModal('bin-modal');
+  // make sure we're on the dump view so the fire is visible
+  if(!document.getElementById('view-dump').classList.contains('active')) switchView('dump');
+
+  const fire = document.getElementById('fire');
+  const bin = document.getElementById('bin');
+  bin.classList.add('open');
+  fire.classList.add('lit');
+  if (navigator.vibrate) navigator.vibrate([15,40,15]);
+
+  data.dump = []; save();
+  setTimeout(()=>{
+    fire.classList.remove('lit');
+    bin.classList.remove('open');
+    renderDump();
+    toast('Сожжено. Голова чище 🌬');
+  }, 1400);
+}
 let dragId = null;
 function attachDnD() {
   document.querySelectorAll('.task').forEach(t => {
@@ -1030,7 +1234,7 @@ document.getElementById('import-file').addEventListener('change', e => {
 /* ============ UTIL ============ */
 function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderOverview(); }
+function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderOverview(); }
 
 /* clock */
 function tickClock(){
