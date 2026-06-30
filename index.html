@@ -348,10 +348,10 @@
   /* ---------- Wheel of Life ---------- */
   .wheel-top { display: flex; gap: 24px; flex-wrap: wrap; align-items: flex-start; margin-bottom: 26px; }
   .wheel-canvas-wrap { flex: none; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-  .wheel-svg { width: 340px; height: 340px; max-width: 86vw; }
+  .wheel-svg { width: 400px; height: 348px; max-width: 92vw; }
   .wheel-seg { cursor: pointer; transition: opacity .15s; }
   .wheel-seg:hover { opacity: .85; }
-  .wheel-label { font-size: 10px; fill: var(--text-dim); pointer-events: none; }
+  .wheel-label { font-size: 12px; fill: var(--text-dim); pointer-events: none; }
   .wheel-side { flex: 1; min-width: 260px; }
   .wheel-meta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
   .wheel-meta .wm { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; flex: 1; min-width: 120px; }
@@ -395,6 +395,36 @@
   #sph-goals .sgd .x { color: var(--text-faint); cursor: pointer; margin-left: auto; }
   #sph-goals .sgd .x:hover { color: var(--rose); }
   .wheel-empty-cta { text-align: center; }
+
+  /* task sphere chip + body */
+  .task .tbody { flex: 1; min-width: 0; }
+  .tsphere {
+    display: inline-block; margin-top: 5px; font-size: 10.5px; color: var(--violet);
+    border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; cursor: pointer;
+  }
+  .tsphere:hover { border-color: var(--violet); }
+
+  /* wheel folder in tasks */
+  .wheel-folder-block { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 18px; }
+  .wf-title { font-size: 15px; font-weight: 600; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 8px; }
+  .wf-title:hover { color: var(--amber); }
+  .wf-title #wf-caret { color: var(--text-faint); font-size: 12px; }
+  #wheel-folder { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fill,minmax(300px,1fr)); gap: 14px; }
+  .wf-sphere { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; }
+  .wf-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; font-size: 14.5px; }
+  .wf-head .wf-score { margin-left: auto; font-size: 12px; color: var(--text-faint); }
+  .wf-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 7px; font-size: 13.5px; }
+  .wf-item:hover { background: var(--panel-2); }
+  .wf-item.wf-proj { cursor: pointer; }
+  .wf-item .wf-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .wf-item .wf-tag { font-size: 10px; color: var(--violet); border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; flex: none; }
+  .wf-item .wf-col { font-size: 10.5px; color: var(--text-faint); flex: none; }
+  .wf-bar { width: 46px; height: 6px; background: var(--ink-soft); border-radius: 99px; overflow: hidden; flex: none; }
+  .wf-bar > i { display: block; height: 100%; border-radius: 99px; }
+  .wf-none { font-size: 12.5px; color: var(--text-faint); padding: 4px 8px; }
+  .wf-add { display: flex; gap: 6px; margin-top: 10px; }
+  .wf-add input { flex: 1; font-size: 13px; padding: 8px 10px; }
+  .wf-empty { color: var(--text-dim); font-size: 14px; padding: 10px 0; }
 
   /* ---------- Inputs ---------- */
   input[type=text], input[type=date], select, textarea {
@@ -605,6 +635,13 @@
         <button class="btn btn-ghost" onclick="switchView('logbook')">📓 Журнал <span id="log-count" class="log-badge"></span></button>
       </div>
       <div class="board" id="board"></div>
+
+      <div class="wheel-folder-block">
+        <div class="wf-title" onclick="toggleWheelFolder()">
+          <span id="wf-caret">▸</span> Папка «Колесо» <span style="color:var(--text-faint);font-weight:400;font-size:12px">— цели и задачи по сферам</span>
+        </div>
+        <div id="wheel-folder" style="display:none"></div>
+      </div>
     </section>
 
     <!-- LOGBOOK -->
@@ -707,6 +744,9 @@
     <h3 class="display">Новый проект</h3>
     <label class="fld"><span>Название</span><input type="text" id="pm-name" placeholder="Например, выучить английский"></label>
     <label class="fld"><span>Срок (необязательно)</span><input type="date" id="pm-date"></label>
+    <label class="fld"><span>Сфера колеса (необязательно)</span>
+      <select id="pm-sphere"><option value="">— без сферы —</option></select>
+    </label>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('project-modal')">Отмена</button>
       <button class="btn btn-primary" onclick="saveProject()">Создать</button>
@@ -910,7 +950,17 @@ function toast(msg) {
 
 /* ============ MODAL ============ */
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-function openProjectModal(){ document.getElementById('pm-name').value=''; document.getElementById('pm-date').value=''; document.getElementById('project-modal').classList.add('open'); setTimeout(()=>document.getElementById('pm-name').focus(),50); }
+function openProjectModal(preSphereId){
+  document.getElementById('pm-name').value='';
+  document.getElementById('pm-date').value='';
+  // populate sphere dropdown from current wheel
+  const sel = document.getElementById('pm-sphere');
+  const spheres = data.wheel ? data.wheel.spheres : [];
+  sel.innerHTML = '<option value="">— без сферы —</option>' +
+    spheres.map(s=>`<option value="${s.id}" ${preSphereId===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+  document.getElementById('project-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('pm-name').focus(),50);
+}
 function openHabitModal(){ document.getElementById('hm-name').value=''; document.getElementById('habit-modal').classList.add('open'); setTimeout(()=>document.getElementById('hm-name').focus(),50); }
 document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', e => { if(e.target===m) m.classList.remove('open'); }));
 
@@ -918,24 +968,37 @@ document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', 
 function saveProject() {
   const name = document.getElementById('pm-name').value.trim();
   if (!name) { toast('Впиши название'); return; }
-  data.projects.push({ id: uid(), name, due: document.getElementById('pm-date').value, milestones: [] });
-  save(); closeModal('project-modal'); renderProjects(); toast('Проект создан');
+  const proj = { id: uid(), name, due: document.getElementById('pm-date').value, milestones: [] };
+  data.projects.push(proj);
+  // link to a wheel sphere if chosen
+  const sphereId = document.getElementById('pm-sphere').value;
+  if (sphereId && data.wheel) {
+    const s = data.wheel.spheres.find(x=>x.id===sphereId);
+    if (s) s.projectId = proj.id;
+  }
+  save(); closeModal('project-modal'); renderProjects(); renderWheel(); renderTasks();
+  toast('Проект создан');
 }
-function deleteProject(id){ if(confirm('Удалить проект целиком?')){ data.projects = data.projects.filter(p=>p.id!==id); save(); renderProjects(); } }
+function deleteProject(id){ if(confirm('Удалить проект целиком?')){ data.projects = data.projects.filter(p=>p.id!==id); if(data.wheel){ data.wheel.spheres.forEach(s=>{ if(s.projectId===id) s.projectId=''; }); } save(); renderProjects(); renderWheel(); renderTasks(); } }
 function addMilestone(pid, input) {
   const txt = input.value.trim(); if(!txt) return;
   const p = data.projects.find(x=>x.id===pid);
   p.milestones.push({ id: uid(), txt, done: false });
-  save(); renderProjects();
+  save(); renderProjects(); renderWheel();
 }
 function toggleMilestone(pid, mid) {
   const p = data.projects.find(x=>x.id===pid);
   const m = p.milestones.find(x=>x.id===mid);
-  m.done = !m.done; save(); renderProjects();
+  m.done = !m.done; save(); renderProjects(); renderWheel();
 }
-function delMilestone(pid, mid){ const p=data.projects.find(x=>x.id===pid); p.milestones=p.milestones.filter(m=>m.id!==mid); save(); renderProjects(); }
+function delMilestone(pid, mid){ const p=data.projects.find(x=>x.id===pid); p.milestones=p.milestones.filter(m=>m.id!==mid); save(); renderProjects(); renderWheel(); }
 
 function projectPct(p){ if(!p.milestones.length) return 0; return Math.round(p.milestones.filter(m=>m.done).length / p.milestones.length * 100); }
+// reverse lookup: which wheel sphere does this project belong to (if any)
+function projectSphere(projId){
+  if(!data.wheel) return null;
+  return data.wheel.spheres.find(s=>s.projectId===projId) || null;
+}
 
 function renderProjects() {
   const wrap = document.getElementById('projects-list');
@@ -947,12 +1010,14 @@ function renderProjects() {
     const pct = projectPct(p);
     const dueTxt = p.due ? `до ${new Date(p.due+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}` : 'без срока';
     const done = p.milestones.filter(m=>m.done).length;
+    const sph = projectSphere(p.id);
+    const sphTag = sph ? ` · <span style="color:var(--violet)">◍ ${esc(sph.name)}</span>` : '';
     return `<div class="card">
       <div class="proj-head">
         <div class="pct">${pct}<span style="font-size:14px">%</span></div>
         <div style="flex:1">
           <h3>${esc(p.name)}</h3>
-          <div class="meta">${done}/${p.milestones.length} этапов · ${dueTxt}</div>
+          <div class="meta">${done}/${p.milestones.length} этапов · ${dueTxt}${sphTag}</div>
         </div>
         <button class="icon-btn" onclick="deleteProject('${p.id}')">✕</button>
       </div>
@@ -1040,9 +1105,11 @@ const COLS = [
   { id:'doing', title:'В работе', color:'var(--amber)' },
   { id:'done', title:'Готово', color:'var(--teal)' },
 ];
-function addTask(col, input) {
+function addTask(col, input, sphereId) {
   const txt = input.value.trim(); if(!txt) return;
-  data.tasks.push({ id: uid(), txt, col, created: Date.now() });
+  const t = { id: uid(), txt, col, created: Date.now() };
+  if(sphereId) t.sphereId = sphereId;
+  data.tasks.push(t);
   save(); renderTasks();
 }
 function delTask(id){ data.tasks=data.tasks.filter(t=>t.id!==id); save(); renderTasks(); renderLogbook(); }
@@ -1083,9 +1150,14 @@ function renderTasks() {
         const order = COLS.map(c=>c.id);
         const ci = order.indexOf(c.id);
         const canLeft = ci > 0, canRight = ci < order.length-1;
+        const sph = t.sphereId && data.wheel ? data.wheel.spheres.find(s=>s.id===t.sphereId) : null;
+        const sphChip = sph ? `<span class="tsphere" onclick="cycleTaskSphere('${t.id}')" title="Сфера колеса">◍ ${esc(sph.name)}</span>` : '';
         return `<div class="task ${c.id==='done'?'is-done':''}" draggable="true" data-id="${t.id}">
         <div class="tcheck" onclick="toggleTaskDone('${t.id}')">✓</div>
-        <div class="tx">${esc(t.txt)}</div>
+        <div class="tbody">
+          <div class="tx">${esc(t.txt)}</div>
+          ${sphChip}
+        </div>
         <div class="tmove">
           <button class="marrow" ${canLeft?'':'disabled'} onclick="stepTask('${t.id}',-1)" title="Левее">‹</button>
           <button class="marrow" ${canRight?'':'disabled'} onclick="stepTask('${t.id}',1)" title="Правее">›</button>
@@ -1098,6 +1170,67 @@ function renderTasks() {
   attachDnD();
   const badge = document.getElementById('log-count');
   if(badge){ const n = data.tasks.filter(isArchived).length; badge.textContent = n||''; }
+  renderWheelFolder();
+}
+
+// "Колесо" folder inside Tasks: groups projects + sphere-tagged tasks by sphere
+function renderWheelFolder(){
+  const box = document.getElementById('wheel-folder');
+  if(!box) return;
+  if(!data.wheel || !data.wheel.spheres.length){
+    box.innerHTML = `<div class="wf-empty">Колесо не создано. <a onclick="switchView('wheel')" style="color:var(--amber);cursor:pointer">Создать колесо →</a></div>`;
+    return;
+  }
+  const spheres = data.wheel.spheres;
+  box.innerHTML = spheres.map((s,i)=>{
+    const col = sphereColor(i);
+    const proj = s.projectId ? data.projects.find(p=>p.id===s.projectId) : null;
+    const sphereTasks = data.tasks.filter(t=>t.sphereId===s.id && t.col!=='done');
+    const doneToday = data.tasks.filter(t=>t.sphereId===s.id && isOnBoardDone(t));
+    const projHtml = proj ? `<div class="wf-item wf-proj" onclick="switchView('projects')">
+        <span class="wf-bar"><i style="width:${projectPct(proj)}%;background:${col}"></i></span>
+        <span class="wf-name">${esc(proj.name)}</span>
+        <span class="wf-tag">проект ${projectPct(proj)}%</span>
+      </div>` : '';
+    const tasksHtml = sphereTasks.map(t=>`<div class="wf-item">
+        <div class="tcheck" style="width:17px;height:17px" onclick="toggleTaskDone('${t.id}')">✓</div>
+        <span class="wf-name">${esc(t.txt)}</span>
+        <span class="wf-col">${COLS.find(c=>c.id===t.col).title}</span>
+      </div>`).join('');
+    const empty = !proj && !sphereTasks.length && !doneToday.length
+      ? `<div class="wf-none">пусто — добавь цель или задачу</div>` : '';
+    return `<div class="wf-sphere">
+      <div class="wf-head">
+        <span class="sphere-dot" style="background:${col}"></span>
+        <b>${esc(s.name)}</b>
+        <span class="wf-score">оценка ${s.score}/10</span>
+      </div>
+      ${projHtml}${tasksHtml}${empty}
+      <div class="wf-add">
+        <input type="text" placeholder="+ задача в эту сферу" onkeydown="if(event.key==='Enter'){addTask('todo',this,'${s.id}'); this.value='';}">
+        ${!proj ? `<button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ цель-проект</button>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleWheelFolder(){
+  const box = document.getElementById('wheel-folder');
+  const caret = document.getElementById('wf-caret');
+  const open = box.style.display !== 'none';
+  box.style.display = open ? 'none' : '';
+  caret.textContent = open ? '▸' : '▾';
+  if(!open) renderWheelFolder();
+}
+
+// quick re-tag: cycle a task through spheres (and none)
+function cycleTaskSphere(id){
+  const t = data.tasks.find(x=>x.id===id); if(!t || !data.wheel) return;
+  const ids = ['', ...data.wheel.spheres.map(s=>s.id)];
+  const cur = ids.indexOf(t.sphereId||'');
+  const next = ids[(cur+1)%ids.length];
+  if(next) t.sphereId = next; else delete t.sphereId;
+  save(); renderTasks();
 }
 
 function reopenTask(id){
@@ -1355,10 +1488,10 @@ function renderWheel(){
 function wheelSvg(w){
   const n = w.spheres.length;
   if(!n) return '<div class="empty" style="width:300px">Нет сфер</div>';
-  const cx=170, cy=170, R=140;
+  // viewBox has generous horizontal padding so side labels never clip
+  const VBW=460, VBH=400, cx=230, cy=195, R=130;
   const step = 2*Math.PI/n;
   let segs='', labels='', rings='';
-  // background rings
   for(let r=1;r<=10;r++){
     rings += `<circle cx="${cx}" cy="${cy}" r="${R*r/10}" fill="none" stroke="#2e3f60" stroke-width="${r===10?1.4:0.6}" opacity="0.5"/>`;
   }
@@ -1373,20 +1506,21 @@ function wheelSvg(w){
     segs += `<path class="wheel-seg" onclick="openSphere('${s.id}')"
       d="M${cx},${cy} L${x0.toFixed(1)},${y0.toFixed(1)} A${rr.toFixed(1)},${rr.toFixed(1)} 0 ${large} 1 ${x1.toFixed(1)},${y1.toFixed(1)} Z"
       fill="${col}" fill-opacity="0.8" stroke="${col}" stroke-width="1"/>`;
-    // label at mid angle, just outside ring
-    const am=(a0+a1)/2; const lr=R+14;
+    // label outside the outer ring, anchored by side so text grows away from the wheel
+    const am=(a0+a1)/2;
+    const lr=R+16;
     const lx=cx+lr*Math.cos(am), ly=cy+lr*Math.sin(am);
-    const anchor = Math.cos(am)>0.3?'start':Math.cos(am)<-0.3?'end':'middle';
-    const short = s.name.length>11?s.name.slice(0,10)+'…':s.name;
-    labels += `<text class="wheel-label" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle">${esc(short)}</text>`;
+    const cosA=Math.cos(am);
+    const anchor = cosA>0.25?'start':cosA<-0.25?'end':'middle';
+    const name = s.name.length>16 ? s.name.slice(0,15)+'…' : s.name;
+    labels += `<text class="wheel-label" x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" dominant-baseline="middle">${esc(name)}</text>`;
   });
-  // spokes
   let spokes='';
   for(let i=0;i<n;i++){
     const a=-Math.PI/2+i*step;
     spokes+=`<line x1="${cx}" y1="${cy}" x2="${(cx+R*Math.cos(a)).toFixed(1)}" y2="${(cy+R*Math.sin(a)).toFixed(1)}" stroke="#2e3f60" stroke-width="0.6" opacity="0.6"/>`;
   }
-  return `<svg class="wheel-svg" viewBox="0 0 340 340">${rings}${segs}${spokes}<circle cx="${cx}" cy="${cy}" r="3" fill="#2e3f60"/>${labels}</svg>`;
+  return `<svg class="wheel-svg" viewBox="0 0 ${VBW} ${VBH}" preserveAspectRatio="xMidYMid meet">${rings}${segs}${spokes}<circle cx="${cx}" cy="${cy}" r="3" fill="#2e3f60"/>${labels}</svg>`;
 }
 
 function setSphereScore(sid, v){
@@ -1403,7 +1537,9 @@ function deleteSphere(sid){
   const s = data.wheel.spheres.find(x=>x.id===sid); if(!s) return;
   if(!confirm(`Удалить сферу «${s.name}»?`)) return;
   data.wheel.spheres = data.wheel.spheres.filter(x=>x.id!==sid);
-  save(); renderWheel();
+  // untag tasks that pointed to this sphere
+  data.tasks.forEach(t=>{ if(t.sphereId===sid) delete t.sphereId; });
+  save(); renderWheel(); renderTasks();
 }
 
 // --- sphere edit modal ---
@@ -1453,7 +1589,7 @@ function saveSphere(){
     s.projectId=sphereDraft.projectId; s.goals=sphereDraft.goals;
     data.wheel.spheres.push(s);
   }
-  save(); closeModal('sphere-modal'); renderWheel();
+  save(); closeModal('sphere-modal'); renderWheel(); renderTasks();
 }
 
 // --- new wheel / archive ---
@@ -1474,16 +1610,20 @@ function confirmNewWheel(){
     data.wheelArchive = data.wheelArchive||[];
     data.wheelArchive.push(snap);
     // carry over sphere names/structure, reset scores+goals
+    const remap = {}; // old sphere id -> new sphere id (matched by name)
     const carried = data.wheel.spheres.map(s=>{
       const ns = newSphere(s.name); ns.projectId = s.projectId||'';
       ns.goals = (s.goals||[]).map(g=>({ id:uid(), txt:g.txt, done:false }));
+      remap[s.id] = ns.id;
       return ns;
     });
+    // keep task tags pointing at the matching new sphere
+    data.tasks.forEach(t=>{ if(t.sphereId && remap[t.sphereId]) t.sphereId = remap[t.sphereId]; });
     data.wheel = { id: uid(), deadline, created: Date.now(), spheres: carried };
   } else {
     data.wheel = { id: uid(), deadline, created: Date.now(), spheres: DEFAULT_SPHERES.map(n=>newSphere(n)) };
   }
-  save(); closeModal('newwheel-modal'); renderWheel();
+  save(); closeModal('newwheel-modal'); renderWheel(); renderTasks();
   toast('Новое колесо готово');
 }
 
@@ -1512,7 +1652,7 @@ function renderWheelArchive(){
 }
 function wheelSvgMini(w){
   // reuse wheelSvg but smaller via wrapper
-  return `<div style="width:120px;height:120px;flex:none">${wheelSvg(w).replace('class="wheel-svg"','style="width:120px;height:120px"')}</div>`;
+  return `<div style="width:150px;height:130px;flex:none">${wheelSvg(w).replace('class="wheel-svg"','style="width:150px;height:130px"')}</div>`;
 }
 function deleteArchivedWheel(id){
   if(!confirm('Удалить это колесо из истории?')) return;
@@ -1620,7 +1760,7 @@ function renderOverview() {
       const t = wheelTotals(data.wheel);
       const dl = daysLeft(data.wheel.deadline);
       ow.innerHTML = `<div class="chart-wrap" style="margin-bottom:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;cursor:pointer" onclick="switchView('wheel')">
-        <div style="width:130px;height:130px;flex:none">${wheelSvg(data.wheel).replace('class="wheel-svg"','style="width:130px;height:130px"')}</div>
+        <div style="width:160px;height:140px;flex:none">${wheelSvg(data.wheel).replace('class="wheel-svg"','style="width:160px;height:140px"')}</div>
         <div style="flex:1;min-width:160px">
           <h3 style="margin-bottom:8px">Колесо жизни</h3>
           <div style="font-size:13.5px;color:var(--text-dim)">средняя оценка <b style="color:var(--amber)">${t.avgScore}/10</b> · целей выполнено ${t.pct}%${dl!==null?` · ${dl<0?'срок прошёл':dl+' дн. до срока'}`:''}</div>
