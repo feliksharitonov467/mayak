@@ -738,6 +738,7 @@
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
     <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
     <div class="navlabel">Данные</div>
+    <button data-view="settings"><span class="ic">⚙</span> Настройки</button>
     <button data-action="export"><span class="ic">⇩</span> Сохранить копию</button>
     <button data-action="import"><span class="ic">⇧</span> Загрузить копию</button>
   </nav>
@@ -824,6 +825,30 @@
         <button class="btn btn-ghost" onclick="switchView('journal')">← К дневнику</button>
       </div>
       <div id="journal-stats-body"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section class="view" id="view-settings">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Настройки</h2>
+          <p>Часовой пояс и данные</p>
+        </div>
+      </div>
+      <div class="card" style="max-width:520px;margin-bottom:16px">
+        <h3 style="font-size:15px;margin-bottom:6px">Часовой пояс</h3>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">По этому поясу считается «сегодня»: когда обнуляются привычки, к какому дню относится оценка. Смена дня происходит в полночь выбранного пояса.</p>
+        <label class="fld"><span>Пояс</span><select id="set-tz" onchange="setTimezone(this.value)"></select></label>
+        <div id="tz-now" style="font-size:12.5px;color:var(--text-faint)"></div>
+      </div>
+      <div class="card" style="max-width:520px">
+        <h3 style="font-size:15px;margin-bottom:6px">Резервная копия</h3>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Сохрани все свои данные в файл или загрузи из файла на другом устройстве.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn btn-ghost" onclick="exportData()">⇩ Сохранить копию</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()">⇧ Загрузить копию</button>
+        </div>
+      </div>
     </section>
 
     <!-- HABITS -->
@@ -1114,14 +1139,36 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
 const uid = () => Math.random().toString(36).slice(2, 9);
-const todayKey = () => new Date().toISOString().slice(0,10);
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], created: Date.now() }; }
+// ---- Timezone-aware dates ----
+// The app's "day" is computed in the user's chosen timezone (default Moscow),
+// so streaks/day-ratings roll over at local midnight of that zone, not the device's.
+const DEFAULT_TZ = 'Europe/Moscow';
+function userTZ(){ return (data.settings && data.settings.timezone) || DEFAULT_TZ; }
+// format any Date as YYYY-MM-DD in the chosen timezone (en-CA yields ISO-like date)
+function localKey(dt){
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: userTZ(), year:'numeric', month:'2-digit', day:'2-digit' }).format(dt);
+  } catch(e){
+    // fallback if an invalid tz is stored
+    return new Intl.DateTimeFormat('en-CA', { year:'numeric', month:'2-digit', day:'2-digit' }).format(dt);
+  }
+}
+const todayKey = () => localKey(new Date());
+// add/subtract whole days to a YYYY-MM-DD string without any timezone involvement
+function addDaysKey(key, delta){
+  const [y,m,d] = key.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m-1, d)); // UTC anchor → pure calendar math
+  dt.setUTCDate(dt.getUTCDate()+delta);
+  return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
+}
+
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1180,6 +1227,8 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.dreams)) data.dreams = [];
       if (!data.days || typeof data.days !== 'object' || Array.isArray(data.days)) data.days = {};
       if (!Array.isArray(data.customReasons)) data.customReasons = [];
+      if (!data.settings || typeof data.settings !== 'object') data.settings = { timezone: DEFAULT_TZ };
+      if (!data.settings.timezone) data.settings.timezone = DEFAULT_TZ;
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -1235,6 +1284,7 @@ function switchView(v) {
   if (v === 'dreams') renderDreams();
   if (v === 'journal') { journalDate=null; renderJournal(); }
   if (v === 'journalStats') renderJournalStats();
+  if (v === 'settings') renderSettings();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
@@ -1594,7 +1644,7 @@ const WASTED_OPTIONS = [
 const DEFAULT_REASONS = ['переел','потратил лишние деньги','прокрастинировал','не сделал важное дело','мало двигался','плохо спал','поссорился с кем-то','чувствовал тревогу','не хватило сил'];
 const LOW_DAY_THRESHOLD = 6; // ask about reasons when score < this
 
-let journalDate = null; // which day is being edited; null = today
+let journalDate = null; // concrete 'YYYY-MM-DD'; null means "not set yet" → treated as today
 function jDate(){ return journalDate || todayKey(); }
 function getDay(key){ return data.days[key] || null; }
 function ensureDay(key){
@@ -1621,11 +1671,9 @@ function addCustomReason(input){
   input.value=''; save(); renderJournal();
 }
 function journalDayShift(delta){
-  const base = new Date(jDate()+'T00:00');
-  base.setDate(base.getDate()+delta);
-  const key = base.toISOString().slice(0,10);
-  if(key>todayKey()) return; // no future days
-  journalDate = key===todayKey() ? null : key;
+  const key = addDaysKey(jDate(), delta);   // pure calendar math, tz-independent
+  if(key > todayKey()) return;              // never go into the future
+  journalDate = key;
   renderJournal();
 }
 
@@ -1738,7 +1786,7 @@ function renderJournalStats(){
 
   // last 14 days chart
   const last14 = [];
-  for(let i=13;i>=0;i--){ const dd=new Date(); dd.setDate(dd.getDate()-i); const k=dd.toISOString().slice(0,10); last14.push({k, score: (data.days[k]&&data.days[k].score)||0}); }
+  for(let i=13;i>=0;i--){ const dd=new Date(); dd.setDate(dd.getDate()-i); const k=localKey(dd); last14.push({k, score: (data.days[k]&&data.days[k].score)||0}); }
 
   const stat = (n,l,color)=>`<div class="stat"><div class="num" ${color?`style="color:${color}"`:''}>${n}</div><div class="lbl">${l}</div></div>`;
 
@@ -1793,6 +1841,58 @@ function renderJournalStats(){
       <div class="jh-list">${historyHtml}</div>
     </div>
   `;
+}
+
+/* ============ SETTINGS ============ */
+// key CIS/Russia timezones + a few world ones (default Moscow)
+const TIMEZONES = [
+  { id:'Europe/Kaliningrad', label:'Калининград (UTC+2)' },
+  { id:'Europe/Moscow', label:'Москва, СПб (UTC+3)' },
+  { id:'Europe/Samara', label:'Самара (UTC+4)' },
+  { id:'Asia/Yekaterinburg', label:'Екатеринбург (UTC+5)' },
+  { id:'Asia/Omsk', label:'Омск (UTC+6)' },
+  { id:'Asia/Novosibirsk', label:'Новосибирск (UTC+7)' },
+  { id:'Asia/Irkutsk', label:'Иркутск (UTC+8)' },
+  { id:'Asia/Yakutsk', label:'Якутск (UTC+9)' },
+  { id:'Asia/Vladivostok', label:'Владивосток (UTC+10)' },
+  { id:'Asia/Kamchatka', label:'Камчатка (UTC+12)' },
+  { id:'Europe/Kyiv', label:'Киев (UTC+2/+3)' },
+  { id:'Asia/Almaty', label:'Алматы (UTC+5)' },
+  { id:'Asia/Tbilisi', label:'Тбилиси (UTC+4)' },
+  { id:'Asia/Yerevan', label:'Ереван (UTC+4)' },
+  { id:'Asia/Tashkent', label:'Ташкент (UTC+5)' },
+  { id:'Europe/Minsk', label:'Минск (UTC+3)' },
+  { id:'Asia/Singapore', label:'Сингапур (UTC+8)' },
+  { id:'Europe/London', label:'Лондон (UTC+0/+1)' },
+  { id:'America/New_York', label:'Нью-Йорк (UTC−5/−4)' },
+  { id:'America/Los_Angeles', label:'Лос-Анджелес (UTC−8/−7)' },
+];
+function renderSettings(){
+  const sel = document.getElementById('set-tz');
+  if(!sel) return;
+  const cur = userTZ();
+  // include current tz even if not in the preset list
+  let opts = TIMEZONES.slice();
+  if(!opts.find(t=>t.id===cur)) opts.unshift({id:cur, label:cur});
+  sel.innerHTML = opts.map(t=>`<option value="${t.id}" ${t.id===cur?'selected':''}>${esc(t.label)}</option>`).join('');
+  updateTzNow();
+}
+function updateTzNow(){
+  const el = document.getElementById('tz-now'); if(!el) return;
+  try {
+    const now = new Intl.DateTimeFormat('ru-RU', { timeZone:userTZ(), weekday:'long', day:'numeric', month:'long', hour:'2-digit', minute:'2-digit' }).format(new Date());
+    el.textContent = `Сейчас в выбранном поясе: ${now} · сегодня = ${todayKey()}`;
+  } catch(e){ el.textContent=''; }
+}
+function setTimezone(tz){
+  data.settings = data.settings || {};
+  data.settings.timezone = tz;
+  save();
+  updateTzNow();
+  toast('Часовой пояс обновлён');
+  // refresh views that depend on "today"
+  renderHabits(); renderTasks(); renderOverview();
+  tickClock();
 }
 
 /* ============ HABITS ============ */
@@ -1860,10 +1960,10 @@ function lastNDays(n) {
   return arr;
 }
 function currentStreak(h) {
-  let s=0; const d=new Date();
+  let s=0; let k=todayKey();
   // if today not done, start counting from yesterday
-  if(!h.log[d.toISOString().slice(0,10)]) d.setDate(d.getDate()-1);
-  while(h.log[d.toISOString().slice(0,10)]){ s++; d.setDate(d.getDate()-1); }
+  if(!h.log[k]) k=addDaysKey(k,-1);
+  while(h.log[k]){ s++; k=addDaysKey(k,-1); }
   return s;
 }
 function bestStreak(h) {
@@ -1906,7 +2006,7 @@ function renderHabits() {
           <span class="habit-open" onclick="openHabitDetail('${h.id}')">открыть →</span></div>
       </div>
       <div class="week">
-        ${days.map(d=>{ const k=d.toISOString().slice(0,10); const on=h.log[k]; const fut=k>tk;
+        ${days.map(d=>{ const k=localKey(d); const on=h.log[k]; const fut=k>tk;
           return `<div class="day ${on?'on':''} ${fut?'future':''}" ${fut?'':`onclick="toggleDay('${h.id}','${k}')"`}>
             <span style="font-size:9px">${WD[(d.getDay()+6)%7]}</span><span class="dnum">${d.getDate()}</span>
           </div>`; }).join('')}
@@ -2046,7 +2146,7 @@ function toggleTaskDone(id){
   save(); renderTasks(); renderLogbook();
 }
 // task completed today still shows on the board; older completions live in the logbook
-function doneDateKey(t){ return t.doneAt ? new Date(t.doneAt).toISOString().slice(0,10) : null; }
+function doneDateKey(t){ return t.doneAt ? localKey(new Date(t.doneAt)) : null; }
 function isOnBoardDone(t){ return t.col==='done' && doneDateKey(t)===todayKey(); }
 function isArchived(t){ return t.col==='done' && doneDateKey(t)!==todayKey(); }
 
@@ -2237,7 +2337,7 @@ const RU_MONTHS = ['января','февраля','марта','апреля','
 function prettyDate(key){
   if(key===todayKey()) return 'Сегодня';
   const y=new Date(); y.setDate(y.getDate()-1);
-  if(key===y.toISOString().slice(0,10)) return 'Вчера';
+  if(key===localKey(y)) return 'Вчера';
   const d = new Date(key+'T00:00');
   return `${d.getDate()} ${RU_MONTHS[d.getMonth()]}${d.getFullYear()!==new Date().getFullYear()?' '+d.getFullYear():''}`;
 }
@@ -2764,7 +2864,7 @@ function renderOverview() {
   const days = lastNDays(7);
   const maxH = Math.max(1, data.habits.length);
   document.getElementById('weekchart').innerHTML = days.map(d => {
-    const k = d.toISOString().slice(0,10);
+    const k = localKey(d);
     const cnt = data.habits.filter(x=>x.log[k]).length;
     const pct = Math.round(cnt/maxH*100);
     return `<div class="cb">
@@ -2826,9 +2926,16 @@ function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLog
 /* clock */
 function tickClock(){
   const d = new Date();
-  document.getElementById('clock').innerHTML =
-    d.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'}) + ' · <b>' +
-    d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}) + '</b>';
+  const tz = userTZ();
+  let dateStr, timeStr;
+  try {
+    dateStr = new Intl.DateTimeFormat('ru-RU',{timeZone:tz,weekday:'long',day:'numeric',month:'long'}).format(d);
+    timeStr = new Intl.DateTimeFormat('ru-RU',{timeZone:tz,hour:'2-digit',minute:'2-digit'}).format(d);
+  } catch(e){
+    dateStr = d.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+    timeStr = d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  }
+  document.getElementById('clock').innerHTML = dateStr + ' · <b>' + timeStr + '</b>';
 }
 tickClock(); setInterval(tickClock, 1000*30);
 
