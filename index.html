@@ -407,11 +407,34 @@
 
   /* task sphere chip + body */
   .task .tbody { flex: 1; min-width: 0; }
+  .tchips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+  .tchip {
+    font-size: 10.5px; color: var(--text-dim); border: 1px solid var(--line);
+    border-radius: 5px; padding: 1px 6px; white-space: nowrap;
+  }
+  .tchip.proj { color: var(--text-dim); }
+  .tchip.soon { color: var(--amber); border-color: var(--amber-soft); }
+  .tchip.overdue { color: var(--rose); border-color: var(--rose); }
+  .task .tedit { color: var(--text-faint); font-size: 12px; padding: 4px 5px; }
+  .task .tedit:hover { color: var(--amber); }
   .tsphere {
-    display: inline-block; margin-top: 5px; font-size: 10.5px; color: var(--violet);
+    display: inline-block; font-size: 10.5px; color: var(--violet);
     border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px; cursor: pointer;
   }
   .tsphere:hover { border-color: var(--violet); }
+
+  /* inbox */
+  .inbox-block { margin-bottom: 22px; }
+  .inbox-capture { display: flex; gap: 10px; margin-bottom: 14px; }
+  .inbox-capture input { flex: 1; }
+  .inbox-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .inbox-item {
+    display: flex; align-items: center; gap: 10px; padding: 11px 14px; margin-bottom: 8px;
+    background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: var(--radius-sm);
+  }
+  .inbox-item .inbox-tx { flex: 1; font-size: 14px; }
+  .inbox-item .x { color: var(--text-faint); cursor: pointer; font-size: 13px; }
+  .inbox-item .x:hover { color: var(--rose); }
 
   /* wheel folder in tasks */
   .wheel-folder-block { margin-top: 26px; border-top: 1px solid var(--line); padding-top: 18px; }
@@ -553,6 +576,7 @@
     .habit-row { flex-direction: column; align-items: stretch; gap: 12px; }
     .hd-stats { grid-template-columns: repeat(2,1fr); }
     .emoji-grid { grid-template-columns: repeat(6,1fr); }
+    .inbox-capture { flex-direction: column; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -680,11 +704,20 @@
       <div class="page-head">
         <div class="titles">
           <h2 class="display">Задачи</h2>
-          <p>Перетаскивай карточки или отмечай галочкой</p>
+          <p>Записывай во входящие, распределяй, отмечай галочкой</p>
         </div>
         <div class="spacer"></div>
         <button class="btn btn-ghost" onclick="switchView('logbook')">📓 Журнал <span id="log-count" class="log-badge"></span></button>
       </div>
+      <div class="inbox-block">
+        <div class="inbox-capture">
+          <input type="text" id="inbox-input" placeholder="✍️ Быстро записать задачу — разберёшь позже (Enter)"
+            onkeydown="if(event.key==='Enter'){addInbox(this); this.value='';}">
+          <button class="btn btn-primary" onclick="addInbox(document.getElementById('inbox-input'))">В входящие</button>
+        </div>
+        <div id="inbox-list"></div>
+      </div>
+
       <div class="board" id="board"></div>
 
       <div class="wheel-folder-block">
@@ -801,6 +834,31 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('project-modal')">Отмена</button>
       <button class="btn btn-primary" onclick="saveProject()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task edit / distribute modal -->
+<div class="modal-bg" id="task-modal">
+  <div class="modal">
+    <h3 class="display" id="tm-title">Задача</h3>
+    <label class="fld"><span>Текст задачи</span><input type="text" id="tm-text" placeholder="Что нужно сделать"></label>
+    <label class="fld"><span>Дедлайн (необязательно)</span><input type="date" id="tm-due"></label>
+    <label class="fld"><span>Категория (необязательно)</span>
+      <select id="tm-category"></select>
+    </label>
+    <label class="fld"><span>Проект (необязательно)</span>
+      <select id="tm-project"><option value="">— без проекта —</option></select>
+    </label>
+    <label class="fld"><span>Сфера колеса (необязательно)</span>
+      <select id="tm-sphere"><option value="">— без сферы —</option></select>
+    </label>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-ghost btn-sm" onclick="deleteTaskFromModal()">Удалить</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-ghost" onclick="closeModal('task-modal')">Отмена</button>
+        <button class="btn btn-primary" id="tm-save" onclick="saveTaskModal()">Сохранить</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1331,11 +1389,23 @@ const COLS = [
   { id:'doing', title:'В работе', color:'var(--amber)' },
   { id:'done', title:'Готово', color:'var(--teal)' },
 ];
+// default task categories (editable later in the finance/settings phase)
+const TASK_CATEGORIES = ['Дом','Работа','Учёба','Здоровье','Финансы','Личное','Спорт','Покупки','Другое'];
+function taskCatOptions(sel){
+  return '<option value="">— без категории —</option>' +
+    TASK_CATEGORIES.map(c=>`<option value="${c}" ${sel===c?'selected':''}>${c}</option>`).join('');
+}
 function addTask(col, input, sphereId) {
   const txt = input.value.trim(); if(!txt) return;
   const t = { id: uid(), txt, col, created: Date.now() };
   if(sphereId) t.sphereId = sphereId;
   data.tasks.push(t);
+  save(); renderTasks();
+}
+// quick-capture into Inbox (undistributed)
+function addInbox(input){
+  const txt = input.value.trim(); if(!txt) return;
+  data.tasks.push({ id: uid(), txt, col:'todo', inbox:true, created: Date.now() });
   save(); renderTasks();
 }
 function delTask(id){ data.tasks=data.tasks.filter(t=>t.id!==id); save(); renderTasks(); renderLogbook(); }
@@ -1365,7 +1435,7 @@ function renderTasks() {
   board.innerHTML = COLS.map(c => {
     const items = c.id==='done'
       ? data.tasks.filter(isOnBoardDone)
-      : data.tasks.filter(t=>t.col===c.id);
+      : data.tasks.filter(t=>t.col===c.id && !t.inbox);
     const note = c.id==='done'
       ? `<div style="font-size:11px;color:var(--text-faint);padding:0 6px 8px">только сегодняшние — остальное в журнале</div>`
       : '';
@@ -1377,17 +1447,24 @@ function renderTasks() {
         const ci = order.indexOf(c.id);
         const canLeft = ci > 0, canRight = ci < order.length-1;
         const sph = t.sphereId && data.wheel ? data.wheel.spheres.find(s=>s.id===t.sphereId) : null;
-        const sphChip = sph ? `<span class="tsphere" onclick="cycleTaskSphere('${t.id}')" title="Сфера колеса">◍ ${esc(sph.name)}</span>` : '';
+        const proj = t.projectId ? data.projects.find(p=>p.id===t.projectId) : null;
+        const chips = [
+          t.due ? `<span class="tchip ${dueClass(t.due)}">📅 ${fmtDue(t.due)}</span>` : '',
+          t.category ? `<span class="tchip">${esc(t.category)}</span>` : '',
+          proj ? `<span class="tchip proj">▤ ${esc(proj.name)}</span>` : '',
+          sph ? `<span class="tsphere" onclick="cycleTaskSphere('${t.id}')" title="Сфера колеса">◍ ${esc(sph.name)}</span>` : ''
+        ].filter(Boolean).join('');
         return `<div class="task ${c.id==='done'?'is-done':''}" draggable="true" data-id="${t.id}">
         <div class="tcheck" onclick="toggleTaskDone('${t.id}')">✓</div>
         <div class="tbody">
           <div class="tx">${esc(t.txt)}</div>
-          ${sphChip}
+          ${chips?`<div class="tchips">${chips}</div>`:''}
         </div>
         <div class="tmove">
           <button class="marrow" ${canLeft?'':'disabled'} onclick="stepTask('${t.id}',-1)" title="Левее">‹</button>
           <button class="marrow" ${canRight?'':'disabled'} onclick="stepTask('${t.id}',1)" title="Правее">›</button>
         </div>
+        <button class="icon-btn tedit" onclick="openTaskModal('${t.id}')" title="Изменить">✎</button>
         <span class="x" onclick="delTask('${t.id}')">✕</span>
       </div>`;}).join('')}
       <div class="col-add"><input type="text" placeholder="+ задача" onkeydown="if(event.key==='Enter'){addTask('${c.id}',this); this.value='';}"></div>
@@ -1396,7 +1473,78 @@ function renderTasks() {
   attachDnD();
   const badge = document.getElementById('log-count');
   if(badge){ const n = data.tasks.filter(isArchived).length; badge.textContent = n||''; }
+  renderInbox();
   renderWheelFolder();
+}
+
+// deadline formatting + urgency
+function fmtDue(due){
+  const d = new Date(due+'T00:00'); const t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((d-t)/86400000);
+  if(diff===0) return 'сегодня';
+  if(diff===1) return 'завтра';
+  if(diff===-1) return 'вчера';
+  return d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+}
+function dueClass(due){
+  const d = new Date(due+'T00:00'); const t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((d-t)/86400000);
+  if(diff<0) return 'overdue';
+  if(diff<=1) return 'soon';
+  return '';
+}
+
+/* ----- Inbox: quick-captured, undistributed tasks ----- */
+function renderInbox(){
+  const box = document.getElementById('inbox-list');
+  if(!box) return;
+  const items = data.tasks.filter(t=>t.inbox);
+  if(!items.length){ box.innerHTML=''; return; }
+  box.innerHTML = `<div class="inbox-title">Входящие <span class="log-badge">${items.length}</span> <span style="color:var(--text-faint);font-weight:400;font-size:12px">— разбери и распредели</span></div>` +
+    items.map(t=>`<div class="inbox-item">
+      <div class="inbox-tx">${esc(t.txt)}</div>
+      <button class="btn btn-primary btn-sm" onclick="openTaskModal('${t.id}')">Распределить</button>
+      <span class="x" onclick="delTask('${t.id}')">✕</span>
+    </div>`).join('');
+}
+
+/* ----- Task edit / distribute modal ----- */
+let editingTaskId = null;
+function openTaskModal(id){
+  const t = data.tasks.find(x=>x.id===id); if(!t) return;
+  editingTaskId = id;
+  document.getElementById('tm-title').textContent = t.inbox ? 'Распределить задачу' : 'Изменить задачу';
+  document.getElementById('tm-save').textContent = t.inbox ? 'Распределить' : 'Сохранить';
+  document.getElementById('tm-text').value = t.txt;
+  document.getElementById('tm-due').value = t.due || '';
+  document.getElementById('tm-category').innerHTML = taskCatOptions(t.category||'');
+  document.getElementById('tm-project').innerHTML = '<option value="">— без проекта —</option>' +
+    data.projects.map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  const spheres = data.wheel ? data.wheel.spheres : [];
+  document.getElementById('tm-sphere').innerHTML = '<option value="">— без сферы —</option>' +
+    spheres.map(s=>`<option value="${s.id}" ${t.sphereId===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+  document.getElementById('task-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('tm-text').focus(),50);
+}
+function saveTaskModal(){
+  const t = data.tasks.find(x=>x.id===editingTaskId); if(!t) return;
+  const txt = document.getElementById('tm-text').value.trim();
+  if(!txt){ toast('Впиши текст задачи'); return; }
+  t.txt = txt;
+  const due = document.getElementById('tm-due').value; if(due) t.due=due; else delete t.due;
+  const cat = document.getElementById('tm-category').value; if(cat) t.category=cat; else delete t.category;
+  const pid = document.getElementById('tm-project').value; if(pid) t.projectId=pid; else delete t.projectId;
+  const sid = document.getElementById('tm-sphere').value; if(sid) t.sphereId=sid; else delete t.sphereId;
+  // distributing an inbox task moves it onto the board
+  if(t.inbox){ delete t.inbox; t.col = 'todo'; }
+  save(); closeModal('task-modal'); renderTasks();
+  toast('Сохранено');
+}
+function deleteTaskFromModal(){
+  if(!editingTaskId) return;
+  if(!confirm('Удалить задачу?')) return;
+  data.tasks = data.tasks.filter(t=>t.id!==editingTaskId);
+  save(); closeModal('task-modal'); renderTasks(); renderLogbook();
 }
 
 // "Колесо" folder inside Tasks: groups projects + sphere-tagged tasks by sphere
@@ -1411,7 +1559,7 @@ function renderWheelFolder(){
   box.innerHTML = spheres.map((s,i)=>{
     const col = sphereColor(i);
     const proj = s.projectId ? data.projects.find(p=>p.id===s.projectId) : null;
-    const sphereTasks = data.tasks.filter(t=>t.sphereId===s.id && t.col!=='done');
+    const sphereTasks = data.tasks.filter(t=>t.sphereId===s.id && t.col!=='done' && !t.inbox);
     const doneToday = data.tasks.filter(t=>t.sphereId===s.id && isOnBoardDone(t));
     const projHtml = proj ? `<div class="wf-item wf-proj" onclick="switchView('projects')">
         <span class="wf-bar"><i style="width:${projectPct(proj)}%;background:${col}"></i></span>
