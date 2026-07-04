@@ -214,6 +214,56 @@
   .dream-statusrow select { width: auto; flex: 1; padding: 7px 10px; font-size: 13px; }
   .dream-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
 
+  /* ---------- Journal / Day rating ---------- */
+  .jnav { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 18px; }
+  .jdate { font-size: 15px; font-weight: 600; text-transform: capitalize; min-width: 200px; text-align: center; }
+  .jcard { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; margin-bottom: 14px; }
+  .jsub { font-size: 14.5px; font-weight: 600; margin-bottom: 12px; }
+  .jscore-card { display: flex; align-items: center; gap: 20px; }
+  .jbig { font-family: Georgia, serif; font-size: 54px; line-height: 1; flex: none; min-width: 90px; text-align: center; }
+  .jbig span { font-size: 18px; color: var(--text-faint); }
+  .jscore-side { flex: 1; }
+  .jscores { display: flex; gap: 6px; flex-wrap: wrap; }
+  .jscore {
+    flex: 1; min-width: 34px; aspect-ratio: 1; max-width: 46px; border: 1px solid var(--line); background: var(--ink-soft);
+    color: var(--text-dim); border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 600; transition: .12s;
+  }
+  .jscore:hover { border-color: var(--amber-soft); transform: translateY(-2px); }
+  .jwasted-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .jwasted {
+    flex: 1; min-width: 70px; border: 1px solid var(--line); background: var(--ink-soft); color: var(--text-dim);
+    border-radius: 8px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 13.5px; transition: .12s;
+  }
+  .jwasted:hover { border-color: var(--amber-soft); }
+  .jwasted.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); }
+  .jlow { border-color: var(--amber-soft); background: linear-gradient(180deg, rgba(246,179,75,.06), transparent); }
+  .jreasons { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+  .jreason {
+    border: 1px solid var(--line); background: var(--ink-soft); color: var(--text-dim);
+    border-radius: 99px; padding: 6px 13px; cursor: pointer; font-family: inherit; font-size: 12.5px; transition: .12s;
+  }
+  .jreason:hover { border-color: var(--rose); }
+  .jreason.on { background: rgba(240,120,138,.15); color: var(--rose); border-color: var(--rose); }
+  .jcustom { display: flex; gap: 8px; }
+  .jcustom input { flex: 1; }
+  .jcrits { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+  .jcrit-label { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; }
+  .jcrit-val { color: var(--amber); font-weight: 600; }
+  .jpips { display: flex; gap: 3px; }
+  .jpip { flex: 1; height: 16px; border-radius: 3px; background: var(--ink-soft); border: 1px solid var(--line); cursor: pointer; transition: .1s; }
+  .jpip:hover { transform: translateY(-2px); }
+  .jcomment { resize: vertical; }
+  .jrbar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+  .jrbar-label { width: 140px; flex: none; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .jrbar { flex: 1; height: 9px; background: var(--ink-soft); border-radius: 99px; overflow: hidden; }
+  .jrbar > i { display: block; height: 100%; background: var(--rose); border-radius: 99px; }
+  .jrbar-n { width: 28px; flex: none; text-align: right; color: var(--text-faint); font-size: 12px; }
+  .jh-list { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+  .jh-item { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+  .jh-score { font-family: Georgia, serif; font-size: 18px; flex: none; width: 26px; text-align: center; }
+  .jh-date { color: var(--text-dim); flex: none; width: 100px; }
+  .jh-extra { color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
   /* ---------- Habits ---------- */
   .habit-row {
     display: flex; align-items: center; gap: 16px; padding: 16px 18px;
@@ -607,6 +657,8 @@
     .hd-stats { grid-template-columns: repeat(2,1fr); }
     .emoji-grid { grid-template-columns: repeat(6,1fr); }
     .inbox-capture { flex-direction: column; }
+    .jcrits { grid-template-columns: 1fr; }
+    .jscore-card { flex-direction: column; align-items: stretch; gap: 12px; text-align: center; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -681,6 +733,7 @@
     <button data-view="projects"><span class="ic">▤</span> Проекты</button>
     <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
     <button data-view="habits"><span class="ic">✦</span> Привычки</button>
+    <button data-view="journal"><span class="ic">☺</span> Дневник</button>
     <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
     <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
@@ -745,6 +798,32 @@
       </div>
       <div class="dream-filters" id="dream-filters"></div>
       <div id="dreams-list"></div>
+    </section>
+
+    <!-- JOURNAL / DAY RATING -->
+    <section class="view" id="view-journal">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Дневник дня</h2>
+          <p>Оцени день и состояние — со временем увидишь закономерности</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="switchView('journalStats')">📊 Статистика</button>
+      </div>
+      <div id="journal-body"></div>
+    </section>
+
+    <!-- JOURNAL STATS -->
+    <section class="view" id="view-journalStats">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Статистика дневника</h2>
+          <p>Динамика оценок и что чаще всего портит день</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="switchView('journal')">← К дневнику</button>
+      </div>
+      <div id="journal-stats-body"></div>
     </section>
 
     <!-- HABITS -->
@@ -878,6 +957,7 @@
   <button data-view="projects"><span class="ic">▤</span> Проекты</button>
   <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
   <button data-view="habits"><span class="ic">✦</span> Привычки</button>
+  <button data-view="journal"><span class="ic">☺</span> Дневник</button>
   <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
   <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
   <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
@@ -1034,14 +1114,14 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], wheel: null, wheelArchive: [], created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const todayKey = () => new Date().toISOString().slice(0,10);
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], wheel: null, wheelArchive: [], created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1098,6 +1178,8 @@ window.onAuthChange = async function(user) {
       if (typeof data.wheel === 'undefined') data.wheel = null;
       if (!Array.isArray(data.projectArchive)) data.projectArchive = [];
       if (!Array.isArray(data.dreams)) data.dreams = [];
+      if (!data.days || typeof data.days !== 'object' || Array.isArray(data.days)) data.days = {};
+      if (!Array.isArray(data.customReasons)) data.customReasons = [];
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -1140,7 +1222,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============ NAV ============ */
 function switchView(v) {
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
-  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v;
+  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v === 'journalStats' ? 'journal' : v;
   document.querySelectorAll('nav.side button[data-view], .mobile-tabs button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === navMatch));
   if (v === 'overview') renderOverview();
@@ -1151,6 +1233,8 @@ function switchView(v) {
   if (v === 'wheelArchive') renderWheelArchive();
   if (v === 'projectArchive') renderProjectArchive();
   if (v === 'dreams') renderDreams();
+  if (v === 'journal') { journalDate=null; renderJournal(); }
+  if (v === 'journalStats') renderJournalStats();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
@@ -1487,6 +1571,229 @@ function renderDreams(){
   }).join('') + `</div>`;
 }
 function setDreamFilter(f){ dreamFilter = f; renderDreams(); }
+
+/* ============ JOURNAL / DAY RATING ============ */
+// criteria rated 1-10 each
+const DAY_CRITERIA = [
+  {id:'mood', label:'Настроение', emoji:'😊'},
+  {id:'energy', label:'Энергия', emoji:'⚡'},
+  {id:'productivity', label:'Продуктивность', emoji:'🎯'},
+  {id:'willpower', label:'Сила воли', emoji:'🛡'},
+  {id:'food', label:'Питание', emoji:'🥗'},
+  {id:'money', label:'Финансы', emoji:'💰'},
+  {id:'sport', label:'Спорт', emoji:'🏃'},
+  {id:'work', label:'Учёба/работа', emoji:'📚'},
+  {id:'relations', label:'Отношения', emoji:'💬'},
+  {id:'sleep', label:'Сон', emoji:'💤'},
+];
+const WASTED_OPTIONS = [
+  {id:'no', label:'Нет'}, {id:'partly', label:'Частично'},
+  {id:'dontknow', label:'Не знаю'}, {id:'yes', label:'Да'},
+];
+// built-in bad-day reasons; user can add their own (stored in data.customReasons)
+const DEFAULT_REASONS = ['переел','потратил лишние деньги','прокрастинировал','не сделал важное дело','мало двигался','плохо спал','поссорился с кем-то','чувствовал тревогу','не хватило сил'];
+const LOW_DAY_THRESHOLD = 6; // ask about reasons when score < this
+
+let journalDate = null; // which day is being edited; null = today
+function jDate(){ return journalDate || todayKey(); }
+function getDay(key){ return data.days[key] || null; }
+function ensureDay(key){
+  if(!data.days[key]) data.days[key] = { score:0, wasted:'', comment:'', criteria:{}, reasons:[] };
+  return data.days[key];
+}
+function allReasons(){ return [...DEFAULT_REASONS, ...(data.customReasons||[])]; }
+
+function setDayScore(v){ const d=ensureDay(jDate()); d.score=v; save(); renderJournal(); }
+function setDayWasted(id){ const d=ensureDay(jDate()); d.wasted=id; save(); renderJournal(); }
+function setDayCriterion(cid, v){ const d=ensureDay(jDate()); d.criteria[cid]=v; save(); renderJournal(); }
+function setDayComment(txt){ const d=ensureDay(jDate()); d.comment=txt; save(); /* no re-render: keep focus */ }
+function toggleDayReasonByIndex(i){
+  const r = allReasons()[i]; if(r==null) return;
+  const d=ensureDay(jDate());
+  if(d.reasons.includes(r)) d.reasons=d.reasons.filter(x=>x!==r); else d.reasons.push(r);
+  save(); renderJournal();
+}
+function addCustomReason(input){
+  const r = input.value.trim(); if(!r) return;
+  if(!allReasons().includes(r)) data.customReasons.push(r);
+  // auto-select it for today
+  const d=ensureDay(jDate()); if(!d.reasons.includes(r)) d.reasons.push(r);
+  input.value=''; save(); renderJournal();
+}
+function journalDayShift(delta){
+  const base = new Date(jDate()+'T00:00');
+  base.setDate(base.getDate()+delta);
+  const key = base.toISOString().slice(0,10);
+  if(key>todayKey()) return; // no future days
+  journalDate = key===todayKey() ? null : key;
+  renderJournal();
+}
+
+function scoreBigColor(v){ if(!v) return 'var(--text-faint)'; if(v<=3) return 'var(--rose)'; if(v<=6) return 'var(--amber)'; return 'var(--teal)'; }
+
+function renderJournal(){
+  const box = document.getElementById('journal-body');
+  if(!box) return;
+  const key = jDate();
+  const d = getDay(key) || { score:0, wasted:'', comment:'', criteria:{}, reasons:[] };
+  const isToday = key===todayKey();
+  const dateLabel = isToday ? 'Сегодня' : new Date(key+'T00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+
+  // 1-10 score buttons
+  const scoreBtns = Array.from({length:10},(_,i)=>{
+    const v=i+1; const on=d.score===v;
+    return `<button class="jscore ${on?'on':''}" style="${on?`background:${scoreBigColor(v)};border-color:${scoreBigColor(v)};color:#0e1726`:''}" onclick="setDayScore(${v})">${v}</button>`;
+  }).join('');
+
+  const wastedBtns = WASTED_OPTIONS.map(o=>
+    `<button class="jwasted ${d.wasted===o.id?'on':''}" onclick="setDayWasted('${o.id}')">${o.label}</button>`
+  ).join('');
+
+  const criteriaHtml = DAY_CRITERIA.map(c=>{
+    const val = d.criteria[c.id]||0;
+    const pips = Array.from({length:10},(_,i)=>{
+      const v=i+1; const on=v<=val;
+      return `<span class="jpip ${on?'on':''}" style="${on?`background:${scoreBigColor(val)}`:''}" onclick="setDayCriterion('${c.id}',${v})"></span>`;
+    }).join('');
+    return `<div class="jcrit">
+      <div class="jcrit-label">${c.emoji} ${c.label} <span class="jcrit-val">${val||'—'}</span></div>
+      <div class="jpips">${pips}</div>
+    </div>`;
+  }).join('');
+
+  // reasons block appears when a low day is scored
+  let reasonsHtml = '';
+  if(d.score && d.score < LOW_DAY_THRESHOLD){
+    const chips = allReasons().map((r,i)=>
+      `<button class="jreason ${d.reasons.includes(r)?'on':''}" onclick="toggleDayReasonByIndex(${i})">${esc(r)}</button>`
+    ).join('');
+    reasonsHtml = `<div class="jcard jlow">
+      <h4 class="jsub">Что именно принесло такие эмоции?</h4>
+      <div class="jreasons">${chips}</div>
+      <div class="jcustom">
+        <input type="text" placeholder="Добавить свою причину (напр. «долго сидел в телефоне»)"
+          onkeydown="if(event.key==='Enter'){addCustomReason(this);}">
+        <button class="btn btn-ghost btn-sm" onclick="addCustomReason(this.previousElementSibling)">Добавить</button>
+      </div>
+    </div>`;
+  }
+
+  box.innerHTML = `
+    <div class="jnav">
+      <button class="icon-btn" onclick="journalDayShift(-1)">‹ вчера</button>
+      <span class="jdate">${dateLabel}</span>
+      <button class="icon-btn" onclick="journalDayShift(1)" ${isToday?'disabled style="opacity:.3"':''}>завтра ›</button>
+    </div>
+
+    <div class="jcard jscore-card">
+      <div class="jbig" style="color:${scoreBigColor(d.score)}">${d.score||'—'}<span>/10</span></div>
+      <div class="jscore-side">
+        <h4 class="jsub">Оценка дня</h4>
+        <div class="jscores">${scoreBtns}</div>
+      </div>
+    </div>
+
+    <div class="jcard">
+      <h4 class="jsub">Зря ли я прожил этот день?</h4>
+      <div class="jwasted-row">${wastedBtns}</div>
+    </div>
+
+    ${reasonsHtml}
+
+    <div class="jcard">
+      <h4 class="jsub">Как по критериям? <span style="font-weight:400;color:var(--text-faint);font-size:12px">(нажми на шкалу)</span></h4>
+      <div class="jcrits">${criteriaHtml}</div>
+    </div>
+
+    <div class="jcard">
+      <h4 class="jsub">Комментарий</h4>
+      <textarea class="jcomment" rows="3" placeholder="Что произошло сегодня, о чём хочется написать…"
+        onchange="setDayComment(this.value)">${esc(d.comment||'')}</textarea>
+    </div>
+  `;
+}
+
+/* ----- Journal statistics ----- */
+function renderJournalStats(){
+  const box = document.getElementById('journal-stats-body');
+  if(!box) return;
+  const keys = Object.keys(data.days).filter(k=>data.days[k].score>0).sort();
+  if(!keys.length){
+    box.innerHTML = `<div class="empty"><div class="big">📊</div><p>Пока нет оценённых дней.<br>Оцени хотя бы один день в дневнике — здесь появится статистика.</p></div>`;
+    return;
+  }
+  const scores = keys.map(k=>data.days[k].score);
+  const avg = Math.round(scores.reduce((a,b)=>a+b,0)/scores.length*10)/10;
+  const best = Math.max(...scores), worst = Math.min(...scores);
+
+  // reason frequency across all days
+  const reasonCount = {};
+  keys.forEach(k=>(data.days[k].reasons||[]).forEach(r=>{ reasonCount[r]=(reasonCount[r]||0)+1; }));
+  const topReasons = Object.entries(reasonCount).sort((a,b)=>b[1]-a[1]).slice(0,8);
+
+  // criteria averages
+  const critSums={}, critCounts={};
+  keys.forEach(k=>{ const c=data.days[k].criteria||{}; Object.keys(c).forEach(id=>{ if(c[id]){ critSums[id]=(critSums[id]||0)+c[id]; critCounts[id]=(critCounts[id]||0)+1; } }); });
+  const critAvgs = DAY_CRITERIA.map(c=>({label:c.label, emoji:c.emoji, avg: critCounts[c.id]? Math.round(critSums[c.id]/critCounts[c.id]*10)/10 : null})).filter(x=>x.avg!==null);
+
+  // last 14 days chart
+  const last14 = [];
+  for(let i=13;i>=0;i--){ const dd=new Date(); dd.setDate(dd.getDate()-i); const k=dd.toISOString().slice(0,10); last14.push({k, score: (data.days[k]&&data.days[k].score)||0}); }
+
+  const stat = (n,l,color)=>`<div class="stat"><div class="num" ${color?`style="color:${color}"`:''}>${n}</div><div class="lbl">${l}</div></div>`;
+
+  const chartBars = last14.map(x=>{
+    const h = x.score? Math.round(x.score/10*100):0;
+    const col = x.score? scoreBigColor(x.score):'var(--line)';
+    const d=new Date(x.k+'T00:00');
+    return `<div class="cb"><div class="cval">${x.score||''}</div><div class="fill" style="height:${h}%;background:${col}"></div><div class="cbl">${d.getDate()}</div></div>`;
+  }).join('');
+
+  const reasonsBlock = topReasons.length ? `
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <h3>Что чаще всего портит день</h3>
+      ${topReasons.map(([r,n])=>{
+        const max = topReasons[0][1];
+        return `<div class="jrbar-row"><span class="jrbar-label">${esc(r)}</span><span class="jrbar"><i style="width:${Math.round(n/max*100)}%"></i></span><span class="jrbar-n">${n}</span></div>`;
+      }).join('')}
+    </div>` : '';
+
+  const critBlock = critAvgs.length ? `
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <h3>Средние оценки по критериям</h3>
+      ${critAvgs.sort((a,b)=>b.avg-a.avg).map(c=>
+        `<div class="jrbar-row"><span class="jrbar-label">${c.emoji} ${c.label}</span><span class="jrbar"><i style="width:${Math.round(c.avg/10*100)}%;background:${scoreBigColor(Math.round(c.avg))}"></i></span><span class="jrbar-n">${c.avg}</span></div>`
+      ).join('')}
+    </div>` : '';
+
+  // history list
+  const historyHtml = keys.slice().reverse().slice(0,30).map(k=>{
+    const dd=data.days[k];
+    const dl=new Date(k+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'});
+    const reasons = (dd.reasons||[]).length ? ` · ${dd.reasons.map(esc).join(', ')}` : '';
+    return `<div class="jh-item"><span class="jh-score" style="color:${scoreBigColor(dd.score)}">${dd.score}</span>
+      <span class="jh-date">${dl}</span><span class="jh-extra">${dd.comment?esc(dd.comment.slice(0,60)):''}${reasons}</span></div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="stat-grid" style="margin-bottom:24px">
+      ${stat(avg,'средняя оценка', scoreBigColor(Math.round(avg)))}
+      ${stat(keys.length,'дней оценено')}
+      ${stat(best,'лучший день','var(--teal)')}
+      ${stat(worst,'худший день','var(--rose)')}
+    </div>
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <h3>Оценка дня за 2 недели</h3>
+      <div class="chartbars">${chartBars}</div>
+    </div>
+    ${reasonsBlock}
+    ${critBlock}
+    <div class="chart-wrap">
+      <h3>История записей</h3>
+      <div class="jh-list">${historyHtml}</div>
+    </div>
+  `;
+}
 
 /* ============ HABITS ============ */
 const HABIT_EMOJIS = ['📖','🏃','💧','🧘','💪','✍️','🎸','🌱','☀️','🧠','💤','🥗','🚭','🧹','📱','🙏','🎯','🚿','🥦','⏰','🎨','🧊'];
