@@ -6,7 +6,7 @@
 <title>Маяк — личный трекер целей</title>
 
 <!-- ============================================================
-     FIREBASE: вставь сюда свой конфиг (см. инстру кцию, шаг 4).
+     FIREBASE: вставь сюда свой конфиг (см. инструкцию, шаг 4).
      Замени значения в кавычках на свои из консоли Firebase.
      ============================================================ -->
 <script>
@@ -191,6 +191,28 @@
   }
   .parch-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font-size: 12.5px; color: var(--text-dim); }
   .parch-stat b { color: var(--amber); font-family: Georgia, serif; font-size: 15px; }
+
+  /* ---------- Dreams ---------- */
+  .dream-filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+  .dfilter {
+    background: var(--panel); border: 1px solid var(--line); color: var(--text-dim);
+    border-radius: 99px; padding: 6px 13px; font-size: 12.5px; cursor: pointer; font-family: inherit; transition: .12s;
+  }
+  .dfilter:hover { border-color: var(--amber-soft); color: var(--text); }
+  .dfilter.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); }
+  .dfilter .dfc { color: var(--text-faint); font-size: 11px; }
+  .dreams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px,1fr)); gap: 14px; }
+  .dream-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; }
+  .dream-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+  .dream-cat { font-size: 11px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 1px; }
+  .dream-status { font-size: 11px; border: 1px solid; border-radius: 5px; padding: 1px 8px; white-space: nowrap; }
+  .dream-name { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+  .dream-desc { font-size: 13px; color: var(--text-dim); margin-bottom: 10px; white-space: pre-wrap; }
+  .dream-link { font-size: 12px; color: var(--teal); cursor: pointer; margin-bottom: 10px; }
+  .dream-link:hover { filter: brightness(1.15); }
+  .dream-statusrow { display: flex; align-items: center; gap: 8px; margin: 6px 0 12px; font-size: 12.5px; color: var(--text-dim); }
+  .dream-statusrow select { width: auto; flex: 1; padding: 7px 10px; font-size: 13px; }
+  .dream-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
 
   /* ---------- Habits ---------- */
   .habit-row {
@@ -590,9 +612,11 @@
     .mobile-tabs {
       display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
       background: rgba(14,23,38,.95); backdrop-filter: blur(12px); border-top: 1px solid var(--line);
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
     }
+    .mobile-tabs::-webkit-scrollbar { display: none; }
     .mobile-tabs button {
-      flex: 1; background: none; border: none; color: var(--text-faint); padding: 9px 2px 13px;
+      flex: 1 0 auto; min-width: 60px; background: none; border: none; color: var(--text-faint); padding: 9px 6px 13px;
       font-size: 9px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: inherit;
     }
     .mobile-tabs button .ic { font-size: 17px; }
@@ -655,6 +679,7 @@
   <nav class="side">
     <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
     <button data-view="projects"><span class="ic">▤</span> Проекты</button>
+    <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
     <button data-view="habits"><span class="ic">✦</span> Привычки</button>
     <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
@@ -706,6 +731,20 @@
         <button class="btn btn-ghost" onclick="switchView('projects')">← К проектам</button>
       </div>
       <div id="projarch-list"></div>
+    </section>
+
+    <!-- DREAMS / GOALS -->
+    <section class="view" id="view-dreams">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Мечты и цели</h2>
+          <p>Всё, чего хочешь в жизни — идеи, желания, мечты</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" onclick="openDreamModal()">+ Новая мечта</button>
+      </div>
+      <div class="dream-filters" id="dream-filters"></div>
+      <div id="dreams-list"></div>
     </section>
 
     <!-- HABITS -->
@@ -837,6 +876,7 @@
 <nav class="mobile-tabs">
   <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
   <button data-view="projects"><span class="ic">▤</span> Проекты</button>
+  <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
   <button data-view="habits"><span class="ic">✦</span> Привычки</button>
   <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
   <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
@@ -881,6 +921,21 @@
         <button class="btn btn-ghost" onclick="closeModal('task-modal')">Отмена</button>
         <button class="btn btn-primary" id="tm-save" onclick="saveTaskModal()">Сохранить</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dream modal -->
+<div class="modal-bg" id="dream-modal">
+  <div class="modal">
+    <h3 class="display" id="dm-title">Новая мечта</h3>
+    <label class="fld"><span>Название</span><input type="text" id="dm-name" placeholder="Например, побывать в Японии"></label>
+    <label class="fld"><span>Описание (необязательно)</span><textarea id="dm-desc" rows="2" placeholder="Детали, зачем это тебе"></textarea></label>
+    <label class="fld"><span>Категория</span><select id="dm-category"></select></label>
+    <label class="fld"><span>Статус</span><select id="dm-status"></select></label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('dream-modal')">Отмена</button>
+      <button class="btn btn-primary" id="dm-save" onclick="saveDream()">Создать</button>
     </div>
   </div>
 </div>
@@ -979,14 +1034,14 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], wheel: null, wheelArchive: [], created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const todayKey = () => new Date().toISOString().slice(0,10);
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], wheel: null, wheelArchive: [], created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1042,6 +1097,7 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.wheelArchive)) data.wheelArchive = [];
       if (typeof data.wheel === 'undefined') data.wheel = null;
       if (!Array.isArray(data.projectArchive)) data.projectArchive = [];
+      if (!Array.isArray(data.dreams)) data.dreams = [];
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -1094,6 +1150,7 @@ function switchView(v) {
   if (v === 'wheel') renderWheel();
   if (v === 'wheelArchive') renderWheelArchive();
   if (v === 'projectArchive') renderProjectArchive();
+  if (v === 'dreams') renderDreams();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
@@ -1295,7 +1352,142 @@ function deleteArchivedProject(id){
   save(); renderProjectArchive(); renderProjects();
 }
 
-/* ============ HABITS ============ */
+/* ============ DREAMS / GOALS ============ */
+const DREAM_CATEGORIES = ['Здоровье','Деньги','Учёба','Отношения','Путешествия','Спорт','Развитие','Другое'];
+// status id -> {label, color}
+const DREAM_STATUSES = {
+  idea:      { label:'Идея',            color:'var(--text-faint)' },
+  want:      { label:'Хочу реализовать', color:'var(--violet)' },
+  progress:  { label:'В процессе',       color:'var(--amber)' },
+  project:   { label:'Стало проектом',   color:'var(--teal)' },
+  task:      { label:'Стало задачей',    color:'var(--teal)' },
+  done:      { label:'Выполнено',        color:'var(--teal)' },
+};
+const DREAM_STATUS_ORDER = ['idea','want','progress','project','task','done'];
+let editingDreamId = null;
+let dreamFilter = 'all';
+
+function openDreamModal(){
+  editingDreamId = null;
+  document.getElementById('dm-title').textContent = 'Новая мечта';
+  document.getElementById('dm-save').textContent = 'Создать';
+  document.getElementById('dm-name').value = '';
+  document.getElementById('dm-desc').value = '';
+  document.getElementById('dm-category').innerHTML = DREAM_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('');
+  document.getElementById('dm-status').innerHTML = DREAM_STATUS_ORDER.map(s=>`<option value="${s}">${DREAM_STATUSES[s].label}</option>`).join('');
+  document.getElementById('dream-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('dm-name').focus(),50);
+}
+function editDream(id){
+  const d = data.dreams.find(x=>x.id===id); if(!d) return;
+  editingDreamId = id;
+  document.getElementById('dm-title').textContent = 'Изменить мечту';
+  document.getElementById('dm-save').textContent = 'Сохранить';
+  document.getElementById('dm-name').value = d.name;
+  document.getElementById('dm-desc').value = d.desc || '';
+  document.getElementById('dm-category').innerHTML = DREAM_CATEGORIES.map(c=>`<option value="${c}" ${d.category===c?'selected':''}>${c}</option>`).join('');
+  document.getElementById('dm-status').innerHTML = DREAM_STATUS_ORDER.map(s=>`<option value="${s}" ${d.status===s?'selected':''}>${DREAM_STATUSES[s].label}</option>`).join('');
+  document.getElementById('dream-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('dm-name').focus(),50);
+}
+function saveDream(){
+  const name = document.getElementById('dm-name').value.trim();
+  if(!name){ toast('Впиши название'); return; }
+  const desc = document.getElementById('dm-desc').value.trim();
+  const category = document.getElementById('dm-category').value;
+  const status = document.getElementById('dm-status').value;
+  if(editingDreamId){
+    const d = data.dreams.find(x=>x.id===editingDreamId);
+    d.name=name; d.desc=desc; d.category=category; d.status=status;
+    toast('Мечта обновлена');
+  } else {
+    data.dreams.push({ id: uid(), name, desc, category, status, created: Date.now(), linkedProjectId:'', linkedTaskId:'' });
+    toast('Мечта добавлена');
+  }
+  save(); closeModal('dream-modal'); renderDreams();
+}
+function deleteDream(id){
+  const d = data.dreams.find(x=>x.id===id); if(!d) return;
+  if(!confirm(`Удалить «${d.name}»?`)) return;
+  data.dreams = data.dreams.filter(x=>x.id!==id);
+  save(); renderDreams();
+}
+function setDreamStatus(id, status){
+  const d = data.dreams.find(x=>x.id===id); if(!d) return;
+  d.status = status; save(); renderDreams();
+}
+// convert a dream into a project, keeping a link both ways
+function dreamToProject(id){
+  const d = data.dreams.find(x=>x.id===id); if(!d) return;
+  if(!confirm(`Превратить «${d.name}» в проект? Мечта останется в списке со статусом «Стало проектом».`)) return;
+  const proj = { id: uid(), name: d.name, due:'', milestones:[], created: Date.now(), fromDreamId: d.id };
+  data.projects.push(proj);
+  d.status = 'project'; d.linkedProjectId = proj.id;
+  save(); renderDreams(); renderProjects();
+  toast('Создан проект из мечты');
+}
+// convert a dream into a task (lands in inbox for distribution)
+function dreamToTask(id){
+  const d = data.dreams.find(x=>x.id===id); if(!d) return;
+  if(!confirm(`Превратить «${d.name}» в задачу? Она появится во «Входящих».`)) return;
+  const t = { id: uid(), txt: d.name, col:'todo', inbox:true, created: Date.now(), fromDreamId: d.id };
+  data.tasks.push(t);
+  d.status = 'task'; d.linkedTaskId = t.id;
+  save(); renderDreams(); renderTasks();
+  toast('Создана задача из мечты (во Входящих)');
+}
+
+function renderDreams(){
+  // filters bar
+  const fbar = document.getElementById('dream-filters');
+  if(fbar){
+    const counts = {};
+    DREAM_STATUS_ORDER.forEach(s=>counts[s]=data.dreams.filter(d=>d.status===s).length);
+    const chip = (val,label,n)=>`<button class="dfilter ${dreamFilter===val?'on':''}" onclick="setDreamFilter('${val}')">${label}${n!=null?` <span class="dfc">${n}</span>`:''}</button>`;
+    fbar.innerHTML = chip('all','Все',data.dreams.length) +
+      DREAM_STATUS_ORDER.map(s=>chip(s,DREAM_STATUSES[s].label,counts[s])).join('');
+  }
+
+  const wrap = document.getElementById('dreams-list');
+  let list = data.dreams.slice();
+  if(dreamFilter!=='all') list = list.filter(d=>d.status===dreamFilter);
+  if(!data.dreams.length){
+    wrap.innerHTML = `<div class="empty"><div class="big">✧</div><p>Здесь живут твои мечты и цели.<br>Запиши всё, чего хочешь — потом любую можно превратить в проект или задачу.</p><button class="btn btn-primary" onclick="openDreamModal()">+ Добавить первую</button></div>`;
+    return;
+  }
+  if(!list.length){ wrap.innerHTML = `<div class="empty"><p>В этом статусе пока пусто.</p></div>`; return; }
+
+  wrap.innerHTML = `<div class="dreams-grid">` + list.map(d=>{
+    const st = DREAM_STATUSES[d.status] || DREAM_STATUSES.idea;
+    const linkedProj = d.linkedProjectId ? data.projects.find(p=>p.id===d.linkedProjectId) : null;
+    const statusOpts = DREAM_STATUS_ORDER.map(s=>`<option value="${s}" ${d.status===s?'selected':''}>${DREAM_STATUSES[s].label}</option>`).join('');
+    // action buttons depend on whether already converted
+    const canProject = d.status!=='project' && !d.linkedProjectId;
+    const canTask = d.status!=='task' && !d.linkedTaskId;
+    return `<div class="dream-card">
+      <div class="dream-top">
+        <span class="dream-cat">${esc(d.category||'Другое')}</span>
+        <span class="dream-status" style="color:${st.color};border-color:${st.color}">${st.label}</span>
+      </div>
+      <h3 class="dream-name">${esc(d.name)}</h3>
+      ${d.desc?`<div class="dream-desc">${esc(d.desc)}</div>`:''}
+      ${linkedProj?`<div class="dream-link" onclick="switchView('projects')">▤ связан с проектом «${esc(linkedProj.name)}» (${projectPct(linkedProj)}%)</div>`:''}
+      ${d.linkedTaskId&&!linkedProj?`<div class="dream-link" onclick="switchView('tasks')">▦ связан с задачей</div>`:''}
+      <div class="dream-statusrow">
+        <label>Статус:</label>
+        <select onchange="setDreamStatus('${d.id}', this.value)">${statusOpts}</select>
+      </div>
+      <div class="dream-actions">
+        ${canProject?`<button class="btn btn-ghost btn-sm" onclick="dreamToProject('${d.id}')">→ в проект</button>`:''}
+        ${canTask?`<button class="btn btn-ghost btn-sm" onclick="dreamToTask('${d.id}')">→ в задачу</button>`:''}
+        <button class="btn btn-ghost btn-sm" onclick="editDream('${d.id}')">✎</button>
+        <button class="btn btn-ghost btn-sm" onclick="deleteDream('${d.id}')">✕</button>
+      </div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+function setDreamFilter(f){ dreamFilter = f; renderDreams(); }
+
 /* ============ HABITS ============ */
 const HABIT_EMOJIS = ['📖','🏃','💧','🧘','💪','✍️','🎸','🌱','☀️','🧠','💤','🥗','🚭','🧹','📱','🙏','🎯','🚿','🥦','⏰','🎨','🧊'];
 let habitDraftEmoji = '';       // currently selected emoji in the modal ('' = no icon)
@@ -2322,7 +2514,7 @@ document.getElementById('import-file').addEventListener('change', e => {
 /* ============ UTIL ============ */
 function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderWheel(); renderOverview(); }
+function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderWheel(); renderDreams(); renderOverview(); }
 
 /* clock */
 function tickClock(){
