@@ -183,6 +183,14 @@
   .ms.done .txt { color: var(--text-faint); text-decoration: line-through; }
   .ms-add { display: flex; gap: 8px; margin-top: 8px; }
   .ms-add input { flex: 1; }
+  .proj-done-banner {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    background: linear-gradient(90deg, rgba(90,209,184,.12), rgba(90,209,184,.04));
+    border: 1px solid var(--teal); border-radius: var(--radius-sm);
+    padding: 10px 14px; margin: 14px 0; font-size: 13.5px; color: var(--teal);
+  }
+  .parch-stats { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 12px; font-size: 12.5px; color: var(--text-dim); }
+  .parch-stat b { color: var(--amber); font-family: Georgia, serif; font-size: 15px; }
 
   /* ---------- Habits ---------- */
   .habit-row {
@@ -681,9 +689,23 @@
           <p>Большие цели, разбитые на этапы</p>
         </div>
         <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="switchView('projectArchive')">✅ Готовые <span id="projarch-count" class="log-badge"></span></button>
         <button class="btn btn-primary" onclick="openProjectModal()">+ Новый проект</button>
       </div>
       <div class="grid" id="projects-list" style="grid-template-columns: repeat(auto-fill, minmax(330px,1fr));"></div>
+    </section>
+
+    <!-- PROJECT ARCHIVE -->
+    <section class="view" id="view-projectArchive">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Журнал готовых</h2>
+          <p>Завершённые проекты и их статистика</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="switchView('projects')">← К проектам</button>
+      </div>
+      <div id="projarch-list"></div>
     </section>
 
     <!-- HABITS -->
@@ -825,7 +847,7 @@
 <!-- Project modal -->
 <div class="modal-bg" id="project-modal">
   <div class="modal">
-    <h3 class="display">Новый проект</h3>
+    <h3 class="display" id="pm-title">Новый проект</h3>
     <label class="fld"><span>Название</span><input type="text" id="pm-name" placeholder="Например, выучить английский"></label>
     <label class="fld"><span>Срок (необязательно)</span><input type="date" id="pm-date"></label>
     <label class="fld"><span>Сфера колеса (необязательно)</span>
@@ -833,7 +855,7 @@
     </label>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('project-modal')">Отмена</button>
-      <button class="btn btn-primary" onclick="saveProject()">Создать</button>
+      <button class="btn btn-primary" id="pm-save" onclick="saveProject()">Создать</button>
     </div>
   </div>
 </div>
@@ -957,14 +979,14 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const todayKey = () => new Date().toISOString().slice(0,10);
 
-function blankData(){ return { projects: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], wheel: null, wheelArchive: [], created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1019,6 +1041,8 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.dump)) data.dump = []; // backfill for older saves
       if (!Array.isArray(data.wheelArchive)) data.wheelArchive = [];
       if (typeof data.wheel === 'undefined') data.wheel = null;
+      if (!Array.isArray(data.projectArchive)) data.projectArchive = [];
+      (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
         if(typeof h.desc==='undefined') h.desc='';
@@ -1060,7 +1084,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============ NAV ============ */
 function switchView(v) {
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
-  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v;
+  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v;
   document.querySelectorAll('nav.side button[data-view], .mobile-tabs button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === navMatch));
   if (v === 'overview') renderOverview();
@@ -1069,6 +1093,7 @@ function switchView(v) {
   if (v === 'dump') renderDump();
   if (v === 'wheel') renderWheel();
   if (v === 'wheelArchive') renderWheelArchive();
+  if (v === 'projectArchive') renderProjectArchive();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
@@ -1088,14 +1113,31 @@ function toast(msg) {
 
 /* ============ MODAL ============ */
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+let editingProjectId = null;
 function openProjectModal(preSphereId){
+  editingProjectId = null;
+  document.getElementById('pm-title').textContent = 'Новый проект';
+  document.getElementById('pm-save').textContent = 'Создать';
   document.getElementById('pm-name').value='';
   document.getElementById('pm-date').value='';
-  // populate sphere dropdown from current wheel
   const sel = document.getElementById('pm-sphere');
   const spheres = data.wheel ? data.wheel.spheres : [];
   sel.innerHTML = '<option value="">— без сферы —</option>' +
     spheres.map(s=>`<option value="${s.id}" ${preSphereId===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+  document.getElementById('project-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('pm-name').focus(),50);
+}
+function editProject(id){
+  const p = data.projects.find(x=>x.id===id); if(!p) return;
+  editingProjectId = id;
+  document.getElementById('pm-title').textContent = 'Изменить проект';
+  document.getElementById('pm-save').textContent = 'Сохранить';
+  document.getElementById('pm-name').value = p.name;
+  document.getElementById('pm-date').value = p.due || '';
+  const curSphere = projectSphere(id);
+  const spheres = data.wheel ? data.wheel.spheres : [];
+  document.getElementById('pm-sphere').innerHTML = '<option value="">— без сферы —</option>' +
+    spheres.map(s=>`<option value="${s.id}" ${curSphere&&curSphere.id===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
   document.getElementById('project-modal').classList.add('open');
   setTimeout(()=>document.getElementById('pm-name').focus(),50);
 }
@@ -1106,16 +1148,53 @@ document.querySelectorAll('.modal-bg').forEach(m => m.addEventListener('click', 
 function saveProject() {
   const name = document.getElementById('pm-name').value.trim();
   if (!name) { toast('Впиши название'); return; }
-  const proj = { id: uid(), name, due: document.getElementById('pm-date').value, milestones: [] };
-  data.projects.push(proj);
-  // link to a wheel sphere if chosen
+  const due = document.getElementById('pm-date').value;
   const sphereId = document.getElementById('pm-sphere').value;
-  if (sphereId && data.wheel) {
-    const s = data.wheel.spheres.find(x=>x.id===sphereId);
-    if (s) s.projectId = proj.id;
+
+  if (editingProjectId){
+    const p = data.projects.find(x=>x.id===editingProjectId);
+    p.name = name; p.due = due;
+    // update sphere link: clear old, set new
+    if(data.wheel){
+      data.wheel.spheres.forEach(s=>{ if(s.projectId===p.id) s.projectId=''; });
+      if(sphereId){ const s=data.wheel.spheres.find(x=>x.id===sphereId); if(s) s.projectId=p.id; }
+    }
+    save(); closeModal('project-modal'); renderProjects(); renderWheel(); renderTasks();
+    toast('Проект обновлён');
+  } else {
+    const proj = { id: uid(), name, due, milestones: [], created: Date.now() };
+    data.projects.push(proj);
+    if (sphereId && data.wheel) {
+      const s = data.wheel.spheres.find(x=>x.id===sphereId);
+      if (s) s.projectId = proj.id;
+    }
+    save(); closeModal('project-modal'); renderProjects(); renderWheel(); renderTasks();
+    toast('Проект создан');
   }
-  save(); closeModal('project-modal'); renderProjects(); renderWheel(); renderTasks();
-  toast('Проект создан');
+}
+// move a finished project to the archive with a stats snapshot
+function completeProject(id){
+  const p = data.projects.find(x=>x.id===id); if(!p) return;
+  if(!confirm('Отправить проект в журнал готовых? Он уедет из текущих проектов.')) return;
+  const total = p.milestones.length;
+  const done = p.milestones.filter(m=>m.done).length;
+  const started = p.created || Date.now();
+  const finished = Date.now();
+  const days = Math.max(1, Math.round((finished - started)/86400000));
+  const sph = projectSphere(p.id);
+  data.projectArchive = data.projectArchive || [];
+  data.projectArchive.push({
+    id: p.id, name: p.name, due: p.due||'',
+    milestonesTotal: total, milestonesDone: done,
+    startedAt: started, finishedAt: finished, days,
+    sphereName: sph ? sph.name : '',
+    milestones: p.milestones.map(m=>({txt:m.txt, done:m.done}))
+  });
+  // remove from active and unlink sphere
+  data.projects = data.projects.filter(x=>x.id!==id);
+  if(data.wheel){ data.wheel.spheres.forEach(s=>{ if(s.projectId===id) s.projectId=''; }); }
+  save(); renderProjects(); renderWheel(); renderTasks();
+  toast('Проект в журнале готовых 🎉');
 }
 function deleteProject(id){ if(confirm('Удалить проект целиком?')){ data.projects = data.projects.filter(p=>p.id!==id); if(data.wheel){ data.wheel.spheres.forEach(s=>{ if(s.projectId===id) s.projectId=''; }); } save(); renderProjects(); renderWheel(); renderTasks(); } }
 function addMilestone(pid, input) {
@@ -1140,6 +1219,8 @@ function projectSphere(projId){
 
 function renderProjects() {
   const wrap = document.getElementById('projects-list');
+  const archBadge = document.getElementById('projarch-count');
+  if(archBadge) archBadge.textContent = (data.projectArchive||[]).length || '';
   if (!data.projects.length) {
     wrap.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🧭</div><p>Пока нет ни одного проекта.<br>Начни с большой цели и разбей её на шаги.</p><button class="btn btn-primary" onclick="openProjectModal()">+ Создать первый</button></div>`;
     return;
@@ -1150,6 +1231,11 @@ function renderProjects() {
     const done = p.milestones.filter(m=>m.done).length;
     const sph = projectSphere(p.id);
     const sphTag = sph ? ` · <span style="color:var(--violet)">◍ ${esc(sph.name)}</span>` : '';
+    const doneBanner = (pct===100 && p.milestones.length)
+      ? `<div class="proj-done-banner">
+           <span>🎉 Все этапы выполнены!</span>
+           <button class="btn btn-primary btn-sm" onclick="completeProject('${p.id}')">Отправить в журнал готовых</button>
+         </div>` : '';
     return `<div class="card">
       <div class="proj-head">
         <div class="pct">${pct}<span style="font-size:14px">%</span></div>
@@ -1157,9 +1243,11 @@ function renderProjects() {
           <h3>${esc(p.name)}</h3>
           <div class="meta">${done}/${p.milestones.length} этапов · ${dueTxt}${sphTag}</div>
         </div>
-        <button class="icon-btn" onclick="deleteProject('${p.id}')">✕</button>
+        <button class="icon-btn" title="Изменить" onclick="editProject('${p.id}')">✎</button>
+        <button class="icon-btn" title="Удалить" onclick="deleteProject('${p.id}')">✕</button>
       </div>
       <div class="bar"><i style="width:${pct}%"></i></div>
+      ${doneBanner}
       <div class="milestones">
         ${p.milestones.map(m=>`<div class="ms ${m.done?'done':''}">
           <div class="check" onclick="toggleMilestone('${p.id}','${m.id}')">✓</div>
@@ -1172,6 +1260,39 @@ function renderProjects() {
       </div>
     </div>`;
   }).join('');
+}
+
+function renderProjectArchive(){
+  const wrap = document.getElementById('projarch-list');
+  const arch = data.projectArchive||[];
+  if(!arch.length){
+    wrap.innerHTML = `<div class="empty"><div class="big">✅</div><p>Журнал готовых пуст.<br>Когда проект будет выполнен на 100%, ты сможешь отправить его сюда.</p></div>`;
+    return;
+  }
+  wrap.innerHTML = arch.slice().reverse().map(a=>{
+    const fin = new Date(a.finishedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+    const sta = new Date(a.startedAt).toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+    const sphTag = a.sphereName ? ` · ◍ ${esc(a.sphereName)}` : '';
+    return `<div class="card" style="margin-bottom:14px">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="flex:1">
+          <h3 style="font-size:17px">✅ ${esc(a.name)}</h3>
+          <div class="meta" style="margin-top:4px">${a.milestonesDone}/${a.milestonesTotal} этапов${sphTag}</div>
+        </div>
+        <button class="icon-btn" title="Убрать из журнала" onclick="deleteArchivedProject('${a.id}')">✕</button>
+      </div>
+      <div class="parch-stats">
+        <div class="parch-stat"><b>${a.days}</b> ${plural(a.days,'день','дня','дней')} в работе</div>
+        <div class="parch-stat">начат: ${sta}</div>
+        <div class="parch-stat">завершён: ${fin}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function deleteArchivedProject(id){
+  if(!confirm('Убрать проект из журнала готовых? Это удалит запись навсегда.')) return;
+  data.projectArchive = (data.projectArchive||[]).filter(a=>a.id!==id);
+  save(); renderProjectArchive(); renderProjects();
 }
 
 /* ============ HABITS ============ */
