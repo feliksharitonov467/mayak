@@ -193,7 +193,14 @@
   .habit-info { flex: 1; min-width: 0; }
   .habit-info h3 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .habit-emoji { font-size: 19px; }
-  .streak { font-size: 12.5px; color: var(--text-dim); margin-top: 3px; display: flex; gap: 14px; }
+  .habit-title { cursor: pointer; }
+  .habit-title:hover { color: var(--amber); }
+  .habit-info h3 .icon-btn { margin-left: 0; }
+  .habit-info h3 .icon-btn:first-of-type { margin-left: auto; }
+  .habit-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 3px; }
+  .habit-open { color: var(--amber); cursor: pointer; }
+  .habit-open:hover { filter: brightness(1.1); }
+  .streak { font-size: 12.5px; color: var(--text-dim); margin-top: 3px; display: flex; gap: 14px; flex-wrap: wrap; }
   .streak b { color: var(--amber); }
   .week { display: flex; gap: 6px; }
   .day {
@@ -452,6 +459,46 @@
   @keyframes pop { from { transform: scale(.95); opacity: 0; } to { transform: none; opacity: 1; } }
   .modal h3 { font-size: 19px; margin-bottom: 18px; }
   .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 8px; }
+  .modal-wide { max-width: 560px; max-height: 88vh; overflow-y: auto; }
+
+  /* emoji picker grid */
+  .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .emoji-cell {
+    aspect-ratio: 1; border: 1px solid var(--line); background: var(--ink-soft); border-radius: 8px;
+    font-size: 19px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: .12s; padding: 0; font-family: inherit;
+  }
+  .emoji-cell:hover { border-color: var(--amber-soft); }
+  .emoji-cell.sel { border-color: var(--amber); background: var(--panel-2); box-shadow: 0 0 0 1px var(--amber) inset; }
+  .emoji-cell.none { font-size: 15px; color: var(--text-faint); }
+
+  /* habit detail */
+  .hd-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+  .hd-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 16px; }
+  .hd-stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 10px; text-align: center; }
+  .hd-stat .n { font-family: Georgia, serif; font-size: 21px; color: var(--amber); line-height: 1; }
+  .hd-stat .l { font-size: 11px; color: var(--text-dim); margin-top: 5px; }
+  .hd-progress { margin-bottom: 20px; }
+  .hd-progress .sp-lbl { font-size: 11.5px; color: var(--text-dim); margin-bottom: 5px; display: flex; justify-content: space-between; }
+  .hd-cal { margin-bottom: 20px; }
+  .hc-head { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 10px; }
+  .hc-month { font-size: 14.5px; font-weight: 600; text-transform: capitalize; min-width: 150px; text-align: center; }
+  .hc-weekdays { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; margin-bottom: 5px; }
+  .hc-weekdays div { text-align: center; font-size: 10px; color: var(--text-faint); }
+  .hc-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
+  .hc-cell {
+    aspect-ratio: 1; border-radius: 7px; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: var(--text-dim); background: var(--ink-soft); border: 1px solid var(--line); cursor: pointer;
+    transition: .12s;
+  }
+  .hc-cell:hover:not(.empty):not(.future) { border-color: var(--amber-soft); }
+  .hc-cell.empty { background: none; border: none; cursor: default; }
+  .hc-cell.on { background: var(--teal); border-color: var(--teal); color: #06241d; font-weight: 700; }
+  .hc-cell.future { opacity: .3; cursor: default; }
+  .hc-cell.before { opacity: .35; }
+  .hd-sub { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
+  .hh-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
+  .hh-item { font-size: 13px; color: var(--text-dim); padding: 6px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
 
   /* ---------- Toast ---------- */
   #toast {
@@ -504,6 +551,8 @@
     .page-head .titles h2 { font-size: 24px; }
     .board { grid-template-columns: 1fr; }
     .habit-row { flex-direction: column; align-items: stretch; gap: 12px; }
+    .hd-stats { grid-template-columns: repeat(2,1fr); }
+    .emoji-grid { grid-template-columns: repeat(6,1fr); }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -759,18 +808,26 @@
 <!-- Habit modal -->
 <div class="modal-bg" id="habit-modal">
   <div class="modal">
-    <h3 class="display">Новая привычка</h3>
+    <h3 class="display" id="hm-title">Новая привычка</h3>
     <label class="fld"><span>Название</span><input type="text" id="hm-name" placeholder="Например, читать 20 минут"></label>
-    <label class="fld"><span>Иконка</span>
-      <select id="hm-emoji">
-        <option>📖</option><option>🏃</option><option>💧</option><option>🧘</option><option>💪</option>
-        <option>✍️</option><option>🎸</option><option>🌱</option><option>☀️</option><option>🧠</option>
-        <option>💤</option><option>🥗</option>
-      </select>
-    </label>
+    <label class="fld"><span>Описание (необязательно)</span><input type="text" id="hm-desc" placeholder="Зачем эта привычка / детали"></label>
+    <div class="fld">
+      <span>Иконка</span>
+      <div class="emoji-grid" id="hm-emoji-grid"></div>
+    </div>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('habit-modal')">Отмена</button>
-      <button class="btn btn-primary" onclick="saveHabit()">Создать</button>
+      <button class="btn btn-primary" id="hm-save" onclick="saveHabit()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Habit detail modal -->
+<div class="modal-bg" id="habit-detail-modal">
+  <div class="modal modal-wide">
+    <div id="habit-detail-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('habit-detail-modal')">Закрыть</button>
     </div>
   </div>
 </div>
@@ -904,6 +961,12 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.dump)) data.dump = []; // backfill for older saves
       if (!Array.isArray(data.wheelArchive)) data.wheelArchive = [];
       if (typeof data.wheel === 'undefined') data.wheel = null;
+      // backfill new habit fields (desc, created) for older saves
+      (data.habits||[]).forEach(h=>{
+        if(typeof h.desc==='undefined') h.desc='';
+        if(!h.created){ const first=Object.keys(h.log||{}).sort()[0]; h.created = first || todayKey(); }
+        if(typeof h.emoji==='undefined') h.emoji='';
+      });
     } catch (e) {
       console.error(e); toast('Не удалось загрузить данные'); data = blankData();
     }
@@ -1054,17 +1117,64 @@ function renderProjects() {
 }
 
 /* ============ HABITS ============ */
+/* ============ HABITS ============ */
+const HABIT_EMOJIS = ['📖','🏃','💧','🧘','💪','✍️','🎸','🌱','☀️','🧠','💤','🥗','🚭','🧹','📱','🙏','🎯','🚿','🥦','⏰','🎨','🧊'];
+let habitDraftEmoji = '';       // currently selected emoji in the modal ('' = no icon)
+let editingHabitId = null;       // null => creating, id => editing
+
+function renderEmojiGrid(){
+  const grid = document.getElementById('hm-emoji-grid');
+  const none = `<button type="button" class="emoji-cell none ${habitDraftEmoji===''?'sel':''}" onclick="pickEmoji('')" title="Без иконки">∅</button>`;
+  grid.innerHTML = none + HABIT_EMOJIS.map(e=>
+    `<button type="button" class="emoji-cell ${habitDraftEmoji===e?'sel':''}" onclick="pickEmoji('${e}')">${e}</button>`
+  ).join('');
+}
+function pickEmoji(e){ habitDraftEmoji = e; renderEmojiGrid(); }
+
+function openHabitModal(){
+  editingHabitId = null;
+  habitDraftEmoji = '📖';
+  document.getElementById('hm-title').textContent = 'Новая привычка';
+  document.getElementById('hm-save').textContent = 'Создать';
+  document.getElementById('hm-name').value = '';
+  document.getElementById('hm-desc').value = '';
+  renderEmojiGrid();
+  document.getElementById('habit-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('hm-name').focus(),50);
+}
+function openHabitEdit(id){
+  const h = data.habits.find(x=>x.id===id); if(!h) return;
+  editingHabitId = id;
+  habitDraftEmoji = h.emoji || '';
+  document.getElementById('hm-title').textContent = 'Изменить привычку';
+  document.getElementById('hm-save').textContent = 'Сохранить';
+  document.getElementById('hm-name').value = h.name;
+  document.getElementById('hm-desc').value = h.desc || '';
+  renderEmojiGrid();
+  document.getElementById('habit-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('hm-name').focus(),50);
+}
 function saveHabit() {
   const name = document.getElementById('hm-name').value.trim();
   if (!name) { toast('Впиши название'); return; }
-  data.habits.push({ id: uid(), name, emoji: document.getElementById('hm-emoji').value, log: {} });
-  save(); closeModal('habit-modal'); renderHabits(); toast('Привычка добавлена');
+  const desc = document.getElementById('hm-desc').value.trim();
+  if (editingHabitId){
+    const h = data.habits.find(x=>x.id===editingHabitId);
+    h.name = name; h.desc = desc; h.emoji = habitDraftEmoji;
+    save(); closeModal('habit-modal'); renderHabits(); toast('Привычка обновлена');
+    // if the detail modal is open for this habit, refresh it
+    if(document.getElementById('habit-detail-modal').classList.contains('open')) openHabitDetail(editingHabitId);
+  } else {
+    data.habits.push({ id: uid(), name, desc, emoji: habitDraftEmoji, log: {}, created: todayKey() });
+    save(); closeModal('habit-modal'); renderHabits(); toast('Привычка добавлена');
+  }
 }
-function deleteHabit(id){ if(confirm('Удалить привычку и её историю?')){ data.habits=data.habits.filter(h=>h.id!==id); save(); renderHabits(); } }
+function deleteHabit(id){ if(confirm('Удалить привычку и её историю?')){ data.habits=data.habits.filter(h=>h.id!==id); save(); closeModal('habit-detail-modal'); renderHabits(); } }
 function toggleDay(hid, dateKey) {
   const h = data.habits.find(x=>x.id===hid);
   if (h.log[dateKey]) delete h.log[dateKey]; else h.log[dateKey] = true;
   save(); renderHabits();
+  if(document.getElementById('habit-detail-modal').classList.contains('open')) openHabitDetail(hid);
 }
 function lastNDays(n) {
   const arr = [];
@@ -1088,6 +1198,13 @@ function bestStreak(h) {
   });
   return best;
 }
+// all-time completion %: done days / days elapsed since creation
+function habitCompletion(h){
+  const total = Object.keys(h.log).length;
+  const start = h.created ? new Date(h.created+'T00:00') : (Object.keys(h.log).sort()[0] ? new Date(Object.keys(h.log).sort()[0]+'T00:00') : new Date());
+  const days = Math.max(1, Math.floor((new Date() - start)/86400000) + 1);
+  return { total, days, pct: Math.min(100, Math.round(total/days*100)) };
+}
 const WD = ['пн','вт','ср','чт','пт','сб','вс'];
 function renderHabits() {
   const wrap = document.getElementById('habits-list');
@@ -1099,12 +1216,16 @@ function renderHabits() {
   const tk = todayKey();
   wrap.innerHTML = data.habits.map(h => {
     const streak = currentStreak(h), best = bestStreak(h), total = Object.keys(h.log).length;
+    const icon = h.emoji ? `<span class="habit-emoji">${h.emoji}</span>` : '';
     return `<div class="habit-row">
       <div class="habit-info">
-        <h3><span class="habit-emoji">${h.emoji}</span> ${esc(h.name)}
-          <button class="icon-btn" style="margin-left:auto" onclick="deleteHabit('${h.id}')">✕</button>
+        <h3>${icon}<span class="habit-title" onclick="openHabitDetail('${h.id}')">${esc(h.name)}</span>
+          <button class="icon-btn" title="Изменить" onclick="openHabitEdit('${h.id}')">✎</button>
+          <button class="icon-btn" title="Удалить" onclick="deleteHabit('${h.id}')">✕</button>
         </h3>
-        <div class="streak"><span>🔥 серия: <b>${streak}</b></span><span>рекорд: ${best}</span><span>всего: ${total}</span></div>
+        ${h.desc?`<div class="habit-desc">${esc(h.desc)}</div>`:''}
+        <div class="streak"><span>🔥 серия: <b>${streak}</b></span><span>рекорд: ${best}</span><span>всего: ${total}</span>
+          <span class="habit-open" onclick="openHabitDetail('${h.id}')">открыть →</span></div>
       </div>
       <div class="week">
         ${days.map(d=>{ const k=d.toISOString().slice(0,10); const on=h.log[k]; const fut=k>tk;
@@ -1114,6 +1235,94 @@ function renderHabits() {
       </div>
     </div>`;
   }).join('');
+}
+
+/* ----- Habit detail modal: monthly calendar + all-time stats ----- */
+let habitDetailMonth = null; // {y, m} currently shown month; null = current
+
+function openHabitDetail(id){
+  const h = data.habits.find(x=>x.id===id); if(!h) return;
+  habitDetailMonth = null; // reset to current month each open
+  renderHabitDetail(id);
+  document.getElementById('habit-detail-modal').classList.add('open');
+}
+function habitMonthShift(id, delta){
+  const base = habitDetailMonth || (()=>{ const n=new Date(); return {y:n.getFullYear(), m:n.getMonth()}; })();
+  let m = base.m + delta, y = base.y;
+  if(m<0){ m=11; y--; } if(m>11){ m=0; y++; }
+  habitDetailMonth = {y, m};
+  renderHabitDetail(id);
+}
+function renderHabitDetail(id){
+  const h = data.habits.find(x=>x.id===id); if(!h) return;
+  const streak = currentStreak(h), best = bestStreak(h);
+  const comp = habitCompletion(h);
+  const now = new Date();
+  const view = habitDetailMonth || {y: now.getFullYear(), m: now.getMonth()};
+  const monthName = new Date(view.y, view.m, 1).toLocaleDateString('ru-RU',{month:'long', year:'numeric'});
+  const tk = todayKey();
+  const createdKey = h.created || (Object.keys(h.log).sort()[0]||tk);
+
+  // build month grid (Mon-first)
+  const first = new Date(view.y, view.m, 1);
+  const startOffset = (first.getDay()+6)%7; // days before the 1st
+  const daysInMonth = new Date(view.y, view.m+1, 0).getDate();
+  let cells='';
+  for(let i=0;i<startOffset;i++) cells += `<div class="hc-cell empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const k = `${view.y}-${String(view.m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const on = h.log[k];
+    const future = k>tk;
+    const before = k<createdKey;
+    const cls = on?'on':future?'future':before?'before':'';
+    cells += `<div class="hc-cell ${cls}" ${(!future)?`onclick="toggleDay('${h.id}','${k}')"`:''}>${d}</div>`;
+  }
+
+  // history list (most recent done days)
+  const doneDays = Object.keys(h.log).sort().reverse();
+  const historyHtml = doneDays.length
+    ? doneDays.slice(0,30).map(k=>`<div class="hh-item">✓ ${new Date(k+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})}</div>`).join('')
+    : `<div class="wf-none">Пока нет отметок</div>`;
+
+  const icon = h.emoji ? `<span style="font-size:26px">${h.emoji}</span>` : '';
+  document.getElementById('habit-detail-body').innerHTML = `
+    <div class="hd-head">
+      ${icon}
+      <div style="flex:1">
+        <h3 class="display" style="font-size:22px">${esc(h.name)}</h3>
+        ${h.desc?`<div style="color:var(--text-dim);font-size:13.5px;margin-top:2px">${esc(h.desc)}</div>`:''}
+        <div style="color:var(--text-faint);font-size:12px;margin-top:4px">с ${new Date(createdKey+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'})}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="openHabitEdit('${h.id}')">✎ Изменить</button>
+    </div>
+
+    <div class="hd-stats">
+      <div class="hd-stat"><div class="n">🔥 ${streak}</div><div class="l">текущая серия</div></div>
+      <div class="hd-stat"><div class="n">${best}</div><div class="l">лучшая серия</div></div>
+      <div class="hd-stat"><div class="n">${comp.total}</div><div class="l">всего выполнений</div></div>
+      <div class="hd-stat"><div class="n">${comp.pct}%</div><div class="l">за всё время</div></div>
+    </div>
+
+    <div class="hd-progress">
+      <div class="sp-lbl"><span>выполнено дней из ${comp.days} с момента создания</span><span>${comp.total}/${comp.days}</span></div>
+      <div class="bar teal"><i style="width:${comp.pct}%"></i></div>
+    </div>
+
+    <div class="hd-cal">
+      <div class="hc-head">
+        <button class="icon-btn" onclick="habitMonthShift('${h.id}',-1)">‹</button>
+        <span class="hc-month">${monthName}</span>
+        <button class="icon-btn" onclick="habitMonthShift('${h.id}',1)">›</button>
+      </div>
+      <div class="hc-weekdays">${WD.map(w=>`<div>${w}</div>`).join('')}</div>
+      <div class="hc-grid">${cells}</div>
+    </div>
+
+    <div class="hd-history">
+      <h4 class="hd-sub">История выполнения</h4>
+      <div class="hh-list">${historyHtml}</div>
+    </div>
+  `;
 }
 
 /* ============ TASKS / KANBAN ============ */
