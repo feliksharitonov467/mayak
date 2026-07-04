@@ -264,6 +264,31 @@
   .jh-date { color: var(--text-dim); flex: none; width: 100px; }
   .jh-extra { color: var(--text-faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+  /* ---------- Wins over weakness ---------- */
+  .win-weakness-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 7px; }
+  .weakness-cell {
+    border: 1px solid var(--line); background: var(--ink-soft); color: var(--text-dim);
+    border-radius: 8px; padding: 10px; cursor: pointer; font-family: inherit; font-size: 12.5px; text-align: left; transition: .12s;
+  }
+  .weakness-cell:hover { border-color: var(--teal); }
+  .weakness-cell.sel { background: rgba(90,209,184,.15); color: var(--teal); border-color: var(--teal); }
+  .win-custom { display: flex; gap: 8px; margin: 10px 0 14px; }
+  .win-custom input { flex: 1; }
+  .win-cal { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
+  .win-cal-cell {
+    aspect-ratio: 1; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 11px; color: var(--text-faint); background: var(--ink-soft); border: 1px solid var(--line);
+  }
+  .win-cal-cell.on { background: var(--teal); border-color: var(--teal); color: #06241d; font-weight: 700; }
+  .win-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; }
+  .win-item { display: flex; align-items: center; gap: 12px; padding: 11px 14px; background: var(--ink-soft); border: 1px solid var(--line); border-left: 3px solid var(--teal); border-radius: 8px; }
+  .win-icon { font-size: 18px; flex: none; }
+  .win-main { flex: 1; min-width: 0; }
+  .win-weak { font-size: 14px; font-weight: 600; }
+  .win-meta { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+  .win-item .x { color: var(--text-faint); cursor: pointer; font-size: 13px; }
+  .win-item .x:hover { color: var(--rose); }
+
   /* ---------- Habits ---------- */
   .habit-row {
     display: flex; align-items: center; gap: 16px; padding: 16px 18px;
@@ -659,6 +684,7 @@
     .inbox-capture { flex-direction: column; }
     .jcrits { grid-template-columns: 1fr; }
     .jscore-card { flex-direction: column; align-items: stretch; gap: 12px; text-align: center; }
+    .win-weakness-grid { grid-template-columns: 1fr; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -734,6 +760,7 @@
     <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
     <button data-view="habits"><span class="ic">✦</span> Привычки</button>
     <button data-view="journal"><span class="ic">☺</span> Дневник</button>
+    <button data-view="wins"><span class="ic">🏆</span> Победы</button>
     <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
     <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
@@ -849,6 +876,17 @@
           <button class="btn btn-ghost" onclick="document.getElementById('import-file').click()">⇧ Загрузить копию</button>
         </div>
       </div>
+    </section>
+
+    <!-- WINS OVER WEAKNESS -->
+    <section class="view" id="view-wins">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Победы над собой</h2>
+          <p>Отмечай моменты, когда ты победил слабость</p>
+        </div>
+      </div>
+      <div id="wins-body"></div>
     </section>
 
     <!-- HABITS -->
@@ -983,6 +1021,7 @@
   <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
   <button data-view="habits"><span class="ic">✦</span> Привычки</button>
   <button data-view="journal"><span class="ic">☺</span> Дневник</button>
+  <button data-view="wins"><span class="ic">🏆</span> Победы</button>
   <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
   <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
   <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
@@ -1041,6 +1080,28 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('dream-modal')">Отмена</button>
       <button class="btn btn-primary" id="dm-save" onclick="saveDream()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Win modal -->
+<div class="modal-bg" id="win-modal">
+  <div class="modal">
+    <h3 class="display">Победа над собой</h3>
+    <div class="fld">
+      <span>Что ты победил?</span>
+      <div class="win-weakness-grid" id="win-weakness-grid"></div>
+    </div>
+    <div class="win-custom">
+      <input type="text" id="win-custom-input" placeholder="Своя формулировка (напр. «не сорвался»)"
+        onkeydown="if(event.key==='Enter'){addCustomWeakness(this);}">
+      <button class="btn btn-ghost btn-sm" onclick="addCustomWeakness(document.getElementById('win-custom-input'))">Добавить</button>
+    </div>
+    <label class="fld"><span>Дата</span><input type="date" id="win-date"></label>
+    <label class="fld"><span>Комментарий (необязательно)</span><textarea id="win-comment" rows="2" placeholder="Как это было, что помогло"></textarea></label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('win-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveWin()">Записать победу</button>
     </div>
   </div>
 </div>
@@ -1139,7 +1200,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1168,7 +1229,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1229,6 +1290,8 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.customReasons)) data.customReasons = [];
       if (!data.settings || typeof data.settings !== 'object') data.settings = { timezone: DEFAULT_TZ };
       if (!data.settings.timezone) data.settings.timezone = DEFAULT_TZ;
+      if (!Array.isArray(data.wins)) data.wins = [];
+      if (!Array.isArray(data.customWeaknesses)) data.customWeaknesses = [];
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -1283,6 +1346,7 @@ function switchView(v) {
   if (v === 'projectArchive') renderProjectArchive();
   if (v === 'dreams') renderDreams();
   if (v === 'journal') { journalDate=null; renderJournal(); }
+  if (v === 'wins') renderWins();
   if (v === 'journalStats') renderJournalStats();
   if (v === 'settings') renderSettings();
   window.scrollTo(0,0);
@@ -1893,6 +1957,130 @@ function setTimezone(tz){
   // refresh views that depend on "today"
   renderHabits(); renderTasks(); renderOverview();
   tickClock();
+}
+
+/* ============ WINS OVER WEAKNESS ============ */
+// built-in weaknesses; user can add their own (stored in data.customWeaknesses)
+const DEFAULT_WEAKNESSES = ['не сорвался','не переел','не потратил на эмоциях','сделал сложное дело','пошёл в зал','не сидел в телефоне','сдержал слово себе','не откладывал'];
+let winWeaknessDraft = ''; // selected weakness in the modal
+
+function allWeaknesses(){ return [...DEFAULT_WEAKNESSES, ...(data.customWeaknesses||[])]; }
+
+function openWinModal(){
+  winWeaknessDraft = '';
+  document.getElementById('win-date').value = todayKey();
+  document.getElementById('win-comment').value = '';
+  document.getElementById('win-custom-input').value = '';
+  renderWeaknessGrid();
+  document.getElementById('win-modal').classList.add('open');
+}
+function renderWeaknessGrid(){
+  const grid = document.getElementById('win-weakness-grid');
+  grid.innerHTML = allWeaknesses().map((w,i)=>
+    `<button type="button" class="weakness-cell ${winWeaknessDraft===w?'sel':''}" onclick="pickWeakness(${i})">${esc(w)}</button>`
+  ).join('');
+}
+function pickWeakness(i){ winWeaknessDraft = allWeaknesses()[i]||''; renderWeaknessGrid(); }
+function addCustomWeakness(input){
+  const w = input.value.trim(); if(!w) return;
+  if(!allWeaknesses().includes(w)) data.customWeaknesses.push(w);
+  winWeaknessDraft = w;
+  input.value=''; save(); renderWeaknessGrid();
+}
+function saveWin(){
+  if(!winWeaknessDraft){ toast('Выбери, что ты победил'); return; }
+  const date = document.getElementById('win-date').value || todayKey();
+  const comment = document.getElementById('win-comment').value.trim();
+  data.wins.push({ id: uid(), date, weakness: winWeaknessDraft, comment, created: Date.now() });
+  save(); closeModal('win-modal'); renderWins();
+  toast('Победа записана 🏆');
+}
+function deleteWin(id){
+  if(!confirm('Удалить эту запись?')) return;
+  data.wins = data.wins.filter(w=>w.id!==id);
+  save(); renderWins();
+}
+// current streak of consecutive days with at least one win
+function winsStreak(){
+  const daysWithWin = new Set(data.wins.map(w=>w.date));
+  let s=0, k=todayKey();
+  if(!daysWithWin.has(k)) k=addDaysKey(k,-1);
+  while(daysWithWin.has(k)){ s++; k=addDaysKey(k,-1); }
+  return s;
+}
+function bestWinsStreak(){
+  const days = [...new Set(data.wins.map(w=>w.date))].sort();
+  let best=0, cur=0, prev=null;
+  days.forEach(k=>{ if(prev){ cur = addDaysKey(prev,1)===k ? cur+1 : 1; } else cur=1; best=Math.max(best,cur); prev=k; });
+  return best;
+}
+
+function renderWins(){
+  const box = document.getElementById('wins-body');
+  if(!box) return;
+  if(!data.wins.length){
+    box.innerHTML = `<div class="empty"><div class="big">🏆</div><p>Здесь ты отмечаешь победы над собой.<br>Каждый раз, когда не сорвался, сделал сложное или сдержал слово — запиши это.</p><button class="btn btn-primary" onclick="openWinModal()">+ Записать первую победу</button></div>`;
+    return;
+  }
+  const total = data.wins.length;
+  const streak = winsStreak(), best = bestWinsStreak();
+  // frequency by weakness
+  const freq = {};
+  data.wins.forEach(w=>{ freq[w.weakness]=(freq[w.weakness]||0)+1; });
+  const topWeak = Object.entries(freq).sort((a,b)=>b[1]-a[1]);
+  const maxFreq = topWeak.length ? topWeak[0][1] : 1;
+
+  // last-30-days calendar of win-days
+  const calDays = [];
+  for(let i=29;i>=0;i--){ calDays.push(addDaysKey(todayKey(), -i)); }
+  const winDaySet = new Set(data.wins.map(w=>w.date));
+  const calHtml = calDays.map(k=>{
+    const has = winDaySet.has(k);
+    const d = new Date(k+'T00:00');
+    return `<div class="win-cal-cell ${has?'on':''}" title="${k}">${d.getDate()}</div>`;
+  }).join('');
+
+  // history (newest first)
+  const history = data.wins.slice().sort((a,b)=>b.created-a.created).slice(0,50);
+  const histHtml = history.map(w=>{
+    const dl = new Date(w.date+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+    return `<div class="win-item">
+      <div class="win-icon">🏆</div>
+      <div class="win-main">
+        <div class="win-weak">${esc(w.weakness)}</div>
+        <div class="win-meta">${dl}${w.comment?` · ${esc(w.comment)}`:''}</div>
+      </div>
+      <span class="x" onclick="deleteWin('${w.id}')">✕</span>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+      <button class="btn btn-primary" onclick="openWinModal()">+ Записать победу</button>
+    </div>
+
+    <div class="stat-grid" style="margin-bottom:20px">
+      <div class="stat"><div class="num">${total}</div><div class="lbl">всего побед</div></div>
+      <div class="stat"><div class="num">🔥 ${streak}</div><div class="lbl">серия побед (дней)</div></div>
+      <div class="stat"><div class="num">${best}</div><div class="lbl">лучшая серия</div></div>
+      <div class="stat"><div class="num">${topWeak.length?esc(topWeak[0][0].slice(0,14)):'—'}</div><div class="lbl">чаще всего побеждаю</div></div>
+    </div>
+
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <h3>Календарь побед (30 дней)</h3>
+      <div class="win-cal">${calHtml}</div>
+    </div>
+
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <h3>Какие слабости побеждаю чаще</h3>
+      ${topWeak.map(([w,n])=>`<div class="jrbar-row"><span class="jrbar-label">${esc(w)}</span><span class="jrbar"><i style="width:${Math.round(n/maxFreq*100)}%;background:var(--teal)"></i></span><span class="jrbar-n">${n}</span></div>`).join('')}
+    </div>
+
+    <div class="chart-wrap">
+      <h3>История побед</h3>
+      <div class="win-list">${histHtml}</div>
+    </div>
+  `;
 }
 
 /* ============ HABITS ============ */
@@ -2921,7 +3109,7 @@ document.getElementById('import-file').addEventListener('change', e => {
 /* ============ UTIL ============ */
 function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderWheel(); renderDreams(); renderOverview(); }
+function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderWheel(); renderDreams(); renderWins(); renderOverview(); }
 
 /* clock */
 function tickClock(){
