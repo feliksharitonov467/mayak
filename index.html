@@ -391,6 +391,25 @@
   .cal-ev-text { font-size: 13.5px; }
   .cal-ev-text.done { text-decoration: line-through; color: var(--text-faint); }
 
+  /* ---------- Overview dashboard ---------- */
+  .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 14px; margin-bottom: 16px; }
+  .ov-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: .12s; }
+  .ov-card:hover { border-color: var(--amber-soft); transform: translateY(-2px); }
+  .ov-card-title { font-size: 13px; color: var(--text-dim); margin-bottom: 12px; font-weight: 600; }
+  .ov-big { font-family: Georgia, serif; font-size: 34px; color: var(--amber); line-height: 1; }
+  .ov-big span { font-size: 15px; color: var(--text-faint); }
+  .ov-row { display: flex; align-items: baseline; gap: 8px; }
+  .ov-metric { font-family: Georgia, serif; font-size: 28px; color: var(--amber); line-height: 1; }
+  .ov-metric-l { font-size: 12px; color: var(--text-dim); }
+  .ov-note { font-size: 12px; color: var(--text-faint); margin-top: 8px; }
+  .ov-empty { font-size: 13px; color: var(--text-faint); padding: 8px 0; }
+  .ov-wide { grid-column: 1/-1; }
+  .ov-events { display: flex; flex-direction: column; gap: 7px; }
+  .ov-event { display: flex; align-items: center; gap: 10px; font-size: 13.5px; }
+  .ov-event-when { flex: none; width: 62px; font-size: 12px; color: var(--text-faint); }
+  .ov-event-icon { flex: none; width: 18px; text-align: center; }
+  .ov-event-text.done { text-decoration: line-through; color: var(--text-faint); }
+
   /* ---------- Habits ---------- */
   .habit-row {
     display: flex; align-items: center; gap: 16px; padding: 16px 18px;
@@ -889,12 +908,7 @@
           <p id="overview-sub">Куда движемся сегодня</p>
         </div>
       </div>
-      <div class="stat-grid" id="stat-grid"></div>
-      <div id="overview-wheel"></div>
-      <div class="chart-wrap">
-        <h3>Привычки за последние 7 дней</h3>
-        <div class="chartbars" id="weekchart"></div>
-      </div>
+      <div id="overview-body"></div>
     </section>
 
     <!-- CALENDAR -->
@@ -4040,61 +4054,120 @@ function attachTouchDrag() {
   });
 }
 
-/* ============ OVERVIEW ============ */
+/* ============ OVERVIEW / DASHBOARD ============ */
 function renderOverview() {
+  const box = document.getElementById('overview-body');
+  if(!box) return;
   const h = new Date().getHours();
   document.getElementById('greeting').textContent = h<6?'Доброй ночи':h<12?'Доброе утро':h<18?'Добрый день':'Добрый вечер';
-
   const tk = todayKey();
-  const habitsToday = data.habits.filter(x=>x.log[tk]).length;
-  const openTasks = data.tasks.filter(t=>t.col!=='done').length;
+
+  const isEmpty = !data.habits.length && !data.projects.length && !data.tasks.length && !data.dreams.length && !data.finance.operations.length;
+  document.getElementById('overview-sub').textContent = isEmpty
+    ? 'Начни с любого раздела — всё важное будет собираться здесь'
+    : new Date(tk+'T00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+
+  // ---- gather data ----
+  // habits today
+  const habitsDone = data.habits.filter(x=>x.log[tk]).length;
+  const habitsTotal = data.habits.length;
+  // tasks today (due today) + open + inbox
+  const tasksToday = data.tasks.filter(t=>t.due===tk && !t.inbox && t.col!=='done');
+  const openTasks = data.tasks.filter(t=>t.col!=='done' && !t.inbox).length;
+  const inboxCount = data.tasks.filter(t=>t.inbox).length;
+  const overdueTasks = data.tasks.filter(t=>t.due && t.due<tk && !t.inbox && t.col!=='done').length;
+  // projects in work
   const activeProjects = data.projects.length;
-  const avgProj = data.projects.length ? Math.round(data.projects.reduce((s,p)=>s+projectPct(p),0)/data.projects.length) : 0;
+  const avgProj = activeProjects ? Math.round(data.projects.reduce((s,p)=>s+projectPct(p),0)/activeProjects) : 0;
+  // day rating today
+  const dayToday = data.days[tk];
+  // finance this month
+  const spent = opsInMonth().filter(o=>o.type==='expense').reduce((a,o)=>a+o.amount,0);
+  const budget = data.finance.budget||0;
+  // meals today
+  const mealSum = sumDay(tk);
+  const mealGoals = data.meals.goals;
+  // wins
+  const winStreak = winsStreak();
+  const winsTotal = data.wins.length;
+  // dreams in progress
+  const dreamsActive = data.dreams.filter(d=>d.status!=='done').length;
+  // upcoming events (next 7 days) from calendar aggregation
+  const upcoming = [];
+  for(let i=0;i<8;i++){ const k=addDaysKey(tk,i); eventsForDate(k).forEach(e=>{ if(e.type!=='day'&&e.type!=='meal'&&e.type!=='fin') upcoming.push({k, ...e}); }); }
 
-  document.getElementById('stat-grid').innerHTML = `
-    <div class="stat"><div class="num">${habitsToday}/${data.habits.length}</div><div class="lbl">привычек сегодня</div></div>
-    <div class="stat"><div class="num">${avgProj}%</div><div class="lbl">средний прогресс проектов</div></div>
-    <div class="stat"><div class="num">${openTasks}</div><div class="lbl">открытых задач</div></div>
-    <div class="stat"><div class="num">${activeProjects}</div><div class="lbl">активных проектов</div></div>`;
+  const card = (view, title, bodyHtml, accent) => `<div class="ov-card" onclick="switchView('${view}')" ${accent?`style="border-top:2px solid ${accent}"`:''}>
+    <div class="ov-card-title">${title}</div>${bodyHtml}</div>`;
 
-  document.getElementById('overview-sub').textContent =
-    data.habits.length||data.projects.length||data.tasks.length ? 'Куда движемся сегодня' : 'Начни с раздела Проекты или Привычки слева';
+  // habits card
+  const habitsCard = card('habits', '✦ Привычки сегодня',
+    habitsTotal
+      ? `<div class="ov-big">${habitsDone}<span>/${habitsTotal}</span></div>
+         <div class="bar teal" style="margin-top:8px"><i style="width:${Math.round(habitsDone/habitsTotal*100)}%"></i></div>`
+      : `<div class="ov-empty">Добавь первую привычку</div>`);
 
-  // week chart: how many habits completed each of last 7 days
-  const days = lastNDays(7);
-  const maxH = Math.max(1, data.habits.length);
-  document.getElementById('weekchart').innerHTML = days.map(d => {
-    const k = localKey(d);
-    const cnt = data.habits.filter(x=>x.log[k]).length;
-    const pct = Math.round(cnt/maxH*100);
-    return `<div class="cb">
-      <div class="cval">${cnt||''}</div>
-      <div class="fill" style="height:${pct}%"></div>
-      <div class="cbl">${WD[(d.getDay()+6)%7]}</div>
-    </div>`;
-  }).join('');
+  // tasks card
+  const tasksCard = card('tasks', '▦ Задачи',
+    `<div class="ov-row"><span class="ov-metric">${openTasks}</span><span class="ov-metric-l">открытых</span></div>
+     ${tasksToday.length?`<div class="ov-note">на сегодня: ${tasksToday.length}</div>`:''}
+     ${overdueTasks?`<div class="ov-note" style="color:var(--rose)">просрочено: ${overdueTasks}</div>`:''}
+     ${inboxCount?`<div class="ov-note" style="color:var(--amber)">во входящих: ${inboxCount}</div>`:''}`);
 
-  // wheel mini-summary on overview
-  const ow = document.getElementById('overview-wheel');
-  if(ow){
-    if(data.wheel){
-      const t = wheelTotals(data.wheel);
-      const dl = daysLeft(data.wheel.deadline);
-      ow.innerHTML = `<div class="chart-wrap" style="margin-bottom:24px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;cursor:pointer" onclick="switchView('wheel')">
-        <div style="width:160px;height:140px;flex:none">${wheelSvg(data.wheel).replace('class="wheel-svg"','style="width:160px;height:140px"')}</div>
-        <div style="flex:1;min-width:160px">
-          <h3 style="margin-bottom:8px">Колесо жизни</h3>
-          <div style="font-size:13.5px;color:var(--text-dim)">средняя оценка <b style="color:var(--amber)">${t.avgScore}/10</b> · целей выполнено ${t.pct}%${dl!==null?` · ${dl<0?'срок прошёл':dl+' дн. до срока'}`:''}</div>
-          <div style="font-size:12.5px;color:var(--text-faint);margin-top:10px">нажми, чтобы открыть колесо →</div>
-        </div>
-      </div>`;
-    } else {
-      ow.innerHTML = `<div class="chart-wrap" style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
-        <div><h3 style="margin-bottom:4px">Колесо жизни</h3><div style="font-size:13px;color:var(--text-dim)">Оцени сферы жизни и поставь цели для роста</div></div>
-        <button class="btn btn-primary btn-sm" onclick="switchView('wheel')">Создать колесо</button>
-      </div>`;
-    }
-  }
+  // projects card
+  const projCard = card('projects', '▤ Проекты в работе',
+    activeProjects
+      ? `<div class="ov-big">${avgProj}<span>%</span></div><div class="ov-note">${activeProjects} ${plural(activeProjects,'проект','проекта','проектов')} · средний прогресс</div>`
+      : `<div class="ov-empty">Нет активных проектов</div>`);
+
+  // day rating card
+  const dayCard = card('journal', '☺ Оценка дня',
+    dayToday && dayToday.score
+      ? `<div class="ov-big" style="color:${scoreBigColor(dayToday.score)}">${dayToday.score}<span>/10</span></div>${dayToday.comment?`<div class="ov-note">${esc(dayToday.comment.slice(0,50))}</div>`:''}`
+      : `<div class="ov-empty">Оцени сегодняшний день →</div>`);
+
+  // finance card
+  const finCard = card('finance', '₽ Финансы (месяц)',
+    `<div class="ov-big" style="color:var(--rose);font-size:26px">${fmtMoney(spent)}</div>
+     ${budget>0?`<div class="bar" style="margin-top:8px"><i style="width:${Math.min(100,Math.round(spent/budget*100))}%;background:${spent>budget?'var(--rose)':'var(--amber)'}"></i></div>
+       <div class="ov-note">${spent<=budget?`осталось ${fmtMoney(budget-spent)}`:`перерасход ${fmtMoney(spent-budget)}`}</div>`:`<div class="ov-note">бюджет не задан</div>`}`);
+
+  // meals card
+  const mealCard = card('meals', '🍽 Питание сегодня',
+    mealSum.calories>0
+      ? `<div class="ov-big">${Math.round(mealSum.calories)}<span> ккал</span></div>
+         <div class="ov-note">Б${Math.round(mealSum.protein)} Ж${Math.round(mealSum.fat)} У${Math.round(mealSum.carbs)}${mealGoals.calories>0?` · цель ${mealGoals.calories}`:''}</div>`
+      : `<div class="ov-empty">Запланируй приёмы пищи →</div>`);
+
+  // wins card
+  const winsCard = card('wins', '🏆 Победы',
+    winsTotal
+      ? `<div class="ov-row"><span class="ov-metric">🔥 ${winStreak}</span><span class="ov-metric-l">серия</span></div><div class="ov-note">всего побед: ${winsTotal}</div>`
+      : `<div class="ov-empty">Отметь первую победу →</div>`);
+
+  // dreams card
+  const dreamsCard = card('dreams', '✧ Мечты и цели',
+    data.dreams.length
+      ? `<div class="ov-row"><span class="ov-metric">${dreamsActive}</span><span class="ov-metric-l">в работе</span></div><div class="ov-note">всего: ${data.dreams.length}</div>`
+      : `<div class="ov-empty">Запиши мечту →</div>`);
+
+  // wheel card
+  const wheelCard = data.wheel
+    ? card('wheel', '◍ Колесо жизни', (()=>{ const t=wheelTotals(data.wheel); return `<div class="ov-big">${t.avgScore}<span>/10</span></div><div class="ov-note">целей ${t.pct}% выполнено</div>`; })())
+    : card('wheel', '◍ Колесо жизни', `<div class="ov-empty">Создай колесо жизни →</div>`);
+
+  // upcoming events card (spans wider)
+  const upcomingCard = `<div class="ov-card ov-wide" onclick="switchView('calendar')">
+    <div class="ov-card-title">📅 Ближайшие дни</div>
+    ${upcoming.length ? `<div class="ov-events">${upcoming.slice(0,6).map(e=>{
+      const d=new Date(e.k+'T00:00'); const when = e.k===tk?'сегодня':e.k===addDaysKey(tk,1)?'завтра':d.toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+      return `<div class="ov-event"><span class="ov-event-when">${when}</span><span class="ov-event-icon" style="color:${e.color}">${e.icon}</span><span class="ov-event-text ${e.done?'done':''}">${esc(e.text)}</span></div>`;
+    }).join('')}</div>` : `<div class="ov-empty">На ближайшую неделю событий нет</div>`}
+  </div>`;
+
+  box.innerHTML = `<div class="ov-grid">
+    ${habitsCard}${tasksCard}${projCard}${dayCard}${finCard}${mealCard}${winsCard}${dreamsCard}${wheelCard}
+  </div>
+  ${upcomingCard}`;
 }
 function exportData() {
   const blob = new Blob([JSON.stringify(data,null,2)], {type:'application/json'});
