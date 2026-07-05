@@ -322,6 +322,48 @@
   .fin-import-err { color: var(--rose); font-size: 13px; padding: 10px 12px; background: rgba(240,120,138,.08); border-radius: 8px; }
   .fin-import-ok { color: var(--teal); font-size: 13px; padding: 10px 12px; background: rgba(90,209,184,.08); border-radius: 8px; }
 
+  /* ---------- Meals ---------- */
+  .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
+  .meal-tab { border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); border-radius: 99px; padding: 7px 18px; cursor: pointer; font-family: inherit; font-size: 13.5px; transition: .12s; }
+  .meal-tab.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); font-weight: 600; }
+  .meal-macros-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+  .meal-macros-grid .fld { margin-bottom: 14px; }
+  .meal-savelib { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); margin-bottom: 14px; cursor: pointer; }
+  .meal-savelib input { width: auto; }
+  .meal-summary { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .macro-line { display: flex; flex-wrap: wrap; gap: 8px; }
+  .macro-chip { font-size: 13px; color: var(--text-dim); background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; padding: 6px 11px; }
+  .macro-chip b { color: var(--text); }
+  .macro-chip.over { border-color: var(--rose); color: var(--rose); }
+  .macro-chip.over b { color: var(--rose); }
+  .meal-block { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 15px; margin-bottom: 12px; }
+  .meal-block-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .meal-block-title { font-size: 15px; font-weight: 600; }
+  .meal-block-sum { font-size: 12.5px; color: var(--text-faint); }
+  .meal-items { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+  .meal-item { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
+  .meal-item-main { flex: 1; min-width: 0; }
+  .meal-item-name { font-size: 14px; }
+  .meal-item-macros { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
+  .meal-item .x { color: var(--text-faint); cursor: pointer; font-size: 13px; }
+  .meal-item .x:hover { color: var(--rose); }
+  .meal-empty-mini { font-size: 12.5px; color: var(--text-faint); padding: 4px 2px; }
+  .meal-add-row { display: flex; gap: 8px; }
+  .meal-week { display: flex; flex-direction: column; gap: 8px; }
+  .meal-week-row { display: flex; align-items: center; gap: 14px; padding: 12px 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; transition: .12s; }
+  .meal-week-row:hover { border-color: var(--amber-soft); }
+  .meal-week-row.today { border-color: var(--amber-soft); }
+  .mw-day { flex: none; width: 78px; font-size: 13.5px; font-weight: 600; }
+  .mw-day span { color: var(--text-faint); font-weight: 400; font-size: 12px; }
+  .mw-macros { font-size: 12.5px; color: var(--text-dim); }
+  .meallib-list { display: flex; flex-direction: column; gap: 7px; max-height: 400px; overflow-y: auto; margin-bottom: 14px; }
+  .meallib-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
+  .meallib-main { flex: 1; min-width: 0; }
+  .meallib-name { font-size: 14px; }
+  .meallib-macros { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
+  .meallib-item .x { color: var(--text-faint); cursor: pointer; }
+  .meallib-item .x:hover { color: var(--rose); }
+
   /* ---------- Habits ---------- */
   .habit-row {
     display: flex; align-items: center; gap: 16px; padding: 16px 18px;
@@ -718,6 +760,7 @@
     .jcrits { grid-template-columns: 1fr; }
     .jscore-card { flex-direction: column; align-items: stretch; gap: 12px; text-align: center; }
     .win-weakness-grid { grid-template-columns: 1fr; }
+    .meal-macros-grid { grid-template-columns: repeat(2,1fr); }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -795,6 +838,7 @@
     <button data-view="journal"><span class="ic">☺</span> Дневник</button>
     <button data-view="wins"><span class="ic">🏆</span> Победы</button>
     <button data-view="finance"><span class="ic">₽</span> Финансы</button>
+    <button data-view="meals"><span class="ic">🍽</span> Питание</button>
     <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
     <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
@@ -937,6 +981,24 @@
       <div id="finance-body"></div>
     </section>
 
+    <!-- MEALS / FOOD PLANNER -->
+    <section class="view" id="view-meals">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Питание</h2>
+          <p>Планируй еду, считай КБЖУ и бюджет</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="openMealGoals()">🎯 Цели</button>
+        <button class="btn btn-ghost" onclick="openMealLibrary()">📚 Мои блюда</button>
+      </div>
+      <div class="meal-viewtoggle">
+        <button id="meal-tab-day" class="meal-tab on" onclick="setMealView('day')">День</button>
+        <button id="meal-tab-week" class="meal-tab" onclick="setMealView('week')">Неделя</button>
+      </div>
+      <div id="meals-body"></div>
+    </section>
+
     <!-- HABITS -->
     <section class="view" id="view-habits">
       <div class="page-head">
@@ -1071,6 +1133,7 @@
   <button data-view="journal"><span class="ic">☺</span> Дневник</button>
   <button data-view="wins"><span class="ic">🏆</span> Победы</button>
   <button data-view="finance"><span class="ic">₽</span> Финансы</button>
+  <button data-view="meals"><span class="ic">🍽</span> Питание</button>
   <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
   <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
   <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
@@ -1225,6 +1288,58 @@
   </div>
 </div>
 
+<!-- Meal item modal -->
+<div class="modal-bg" id="meal-modal">
+  <div class="modal">
+    <h3 class="display" id="meal-modal-title">Добавить блюдо</h3>
+    <label class="fld"><span>Название</span><input type="text" id="meal-name" placeholder="Например, овсянка с бананом"></label>
+    <div class="meal-macros-grid">
+      <label class="fld"><span>Ккал</span><input type="number" id="meal-cal" inputmode="numeric" placeholder="0"></label>
+      <label class="fld"><span>Белки, г</span><input type="number" id="meal-prot" inputmode="decimal" placeholder="0"></label>
+      <label class="fld"><span>Жиры, г</span><input type="number" id="meal-fat" inputmode="decimal" placeholder="0"></label>
+      <label class="fld"><span>Углеводы, г</span><input type="number" id="meal-carb" inputmode="decimal" placeholder="0"></label>
+    </div>
+    <label class="fld"><span>Стоимость, ₽ (необязательно)</span><input type="number" id="meal-cost" inputmode="decimal" placeholder="0"></label>
+    <label class="fld"><span>Комментарий (необязательно)</span><input type="text" id="meal-note" placeholder="Детали"></label>
+    <label class="meal-savelib"><input type="checkbox" id="meal-savelib-chk"> Сохранить в «Мои блюда» для повторного использования</label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('meal-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveMealItem()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Meal goals modal -->
+<div class="modal-bg" id="mealgoals-modal">
+  <div class="modal">
+    <h3 class="display">Цели по питанию (в день)</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Оставь 0, если какой-то показатель отслеживать не нужно.</p>
+    <div class="meal-macros-grid">
+      <label class="fld"><span>Ккал</span><input type="number" id="mg-cal" placeholder="0"></label>
+      <label class="fld"><span>Белки, г</span><input type="number" id="mg-prot" placeholder="0"></label>
+      <label class="fld"><span>Жиры, г</span><input type="number" id="mg-fat" placeholder="0"></label>
+      <label class="fld"><span>Углеводы, г</span><input type="number" id="mg-carb" placeholder="0"></label>
+    </div>
+    <label class="fld"><span>Бюджет на еду в день, ₽</span><input type="number" id="mg-budget" placeholder="0"></label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('mealgoals-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveMealGoals()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Meal library modal -->
+<div class="modal-bg" id="meallib-modal">
+  <div class="modal modal-wide">
+    <h3 class="display">Мои блюда</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px" id="meallib-hint">Сохранённые блюда. Нажми, чтобы добавить в выбранный приём пищи.</p>
+    <div id="meallib-list" class="meallib-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('meallib-modal')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
 <!-- Habit modal -->
 <div class="modal-bg" id="habit-modal">
   <div class="modal">
@@ -1319,7 +1434,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1348,7 +1463,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1415,6 +1530,10 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.finance.categories)) data.finance.categories = ['Еда','Транспорт','Развлечения','Другое'];
       if (!Array.isArray(data.finance.operations)) data.finance.operations = [];
       if (typeof data.finance.budget !== 'number') data.finance.budget = 0;
+      if (!data.meals || typeof data.meals !== 'object') data.meals = { plan:{}, library:[], goals:{calories:0,protein:0,fat:0,carbs:0,budget:0} };
+      if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
+      if (!Array.isArray(data.meals.library)) data.meals.library = [];
+      if (!data.meals.goals || typeof data.meals.goals !== 'object') data.meals.goals = {calories:0,protein:0,fat:0,carbs:0,budget:0};
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -1471,6 +1590,7 @@ function switchView(v) {
   if (v === 'journal') { journalDate=null; renderJournal(); }
   if (v === 'wins') renderWins();
   if (v === 'finance') renderFinance();
+  if (v === 'meals') { mealDate=null; renderMeals(); }
   if (v === 'journalStats') renderJournalStats();
   if (v === 'settings') renderSettings();
   window.scrollTo(0,0);
@@ -2445,6 +2565,254 @@ function renderFinance(){
     </div>
   `;
 }
+
+/* ============ MEALS / FOOD PLANNER ============ */
+const MEAL_TYPES = [
+  {id:'breakfast', label:'Завтрак', emoji:'🌅'},
+  {id:'snack', label:'Перекус', emoji:'🍎'},
+  {id:'lunch', label:'Обед', emoji:'🍲'},
+  {id:'dinner', label:'Ужин', emoji:'🌙'},
+  {id:'extra', label:'Дополнительно', emoji:'➕'},
+];
+let mealView = 'day';          // 'day' | 'week'
+let mealDate = null;           // active day; null = today
+let mealTargetMeal = null;     // which meal type we're adding to (for library flow)
+function mDate(){ return mealDate || todayKey(); }
+function mealPlan(){ return data.meals.plan; }
+function dayPlan(key){
+  if(!data.meals.plan[key]) data.meals.plan[key] = { breakfast:[], snack:[], lunch:[], dinner:[], extra:[] };
+  // ensure all meal arrays exist
+  MEAL_TYPES.forEach(m=>{ if(!Array.isArray(data.meals.plan[key][m.id])) data.meals.plan[key][m.id]=[]; });
+  return data.meals.plan[key];
+}
+function getDayPlan(key){ return data.meals.plan[key] || null; }
+
+// sum macros/cost for a list of items
+function sumItems(items){
+  return (items||[]).reduce((a,i)=>({
+    calories: a.calories+(+i.calories||0),
+    protein: a.protein+(+i.protein||0),
+    fat: a.fat+(+i.fat||0),
+    carbs: a.carbs+(+i.carbs||0),
+    cost: a.cost+(+i.cost||0),
+  }), {calories:0,protein:0,fat:0,carbs:0,cost:0});
+}
+function sumDay(key){
+  const p = getDayPlan(key); if(!p) return {calories:0,protein:0,fat:0,carbs:0,cost:0};
+  let all=[]; MEAL_TYPES.forEach(m=>{ all=all.concat(p[m.id]||[]); });
+  return sumItems(all);
+}
+
+function setMealView(v){
+  mealView=v;
+  document.getElementById('meal-tab-day').classList.toggle('on', v==='day');
+  document.getElementById('meal-tab-week').classList.toggle('on', v==='week');
+  renderMeals();
+}
+function mealDayShift(delta){ mealDate = addDaysKey(mDate(), delta); renderMeals(); }
+function mealGoToToday(){ mealDate = null; renderMeals(); }
+
+// --- add / remove meal items ---
+let addingToMeal = null;
+function openMealModal(mealId){
+  addingToMeal = mealId;
+  document.getElementById('meal-modal-title').textContent = 'Добавить: ' + (MEAL_TYPES.find(m=>m.id===mealId)?.label||'');
+  ['meal-name','meal-cal','meal-prot','meal-fat','meal-carb','meal-cost','meal-note'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('meal-savelib-chk').checked=false;
+  document.getElementById('meal-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('meal-name').focus(),50);
+}
+function saveMealItem(){
+  const name = document.getElementById('meal-name').value.trim();
+  if(!name){ toast('Впиши название блюда'); return; }
+  const item = {
+    id: uid(), name,
+    calories:+document.getElementById('meal-cal').value||0,
+    protein:+document.getElementById('meal-prot').value||0,
+    fat:+document.getElementById('meal-fat').value||0,
+    carbs:+document.getElementById('meal-carb').value||0,
+    cost:+document.getElementById('meal-cost').value||0,
+    note:document.getElementById('meal-note').value.trim()
+  };
+  dayPlan(mDate())[addingToMeal].push({...item, id:uid()});
+  if(document.getElementById('meal-savelib-chk').checked){
+    // save a copy to library (without note tie)
+    data.meals.library.push({...item, id:uid()});
+  }
+  save(); closeModal('meal-modal'); renderMeals();
+}
+function removeMealItem(mealId, itemId){
+  const p = dayPlan(mDate());
+  p[mealId] = p[mealId].filter(i=>i.id!==itemId);
+  save(); renderMeals();
+}
+
+// --- meal goals ---
+function openMealGoals(){
+  const g = data.meals.goals;
+  document.getElementById('mg-cal').value = g.calories||'';
+  document.getElementById('mg-prot').value = g.protein||'';
+  document.getElementById('mg-fat').value = g.fat||'';
+  document.getElementById('mg-carb').value = g.carbs||'';
+  document.getElementById('mg-budget').value = g.budget||'';
+  document.getElementById('mealgoals-modal').classList.add('open');
+}
+function saveMealGoals(){
+  data.meals.goals = {
+    calories:+document.getElementById('mg-cal').value||0,
+    protein:+document.getElementById('mg-prot').value||0,
+    fat:+document.getElementById('mg-fat').value||0,
+    carbs:+document.getElementById('mg-carb').value||0,
+    budget:+document.getElementById('mg-budget').value||0,
+  };
+  save(); closeModal('mealgoals-modal'); renderMeals(); toast('Цели сохранены');
+}
+
+// --- library ---
+function openMealLibrary(mealId){
+  mealTargetMeal = mealId||null; // if opened to add into a specific meal
+  const hint = document.getElementById('meallib-hint');
+  hint.textContent = mealTargetMeal
+    ? `Нажми на блюдо, чтобы добавить в «${MEAL_TYPES.find(m=>m.id===mealTargetMeal)?.label}».`
+    : 'Сохранённые блюда. Открой приём пищи и жми «из моих блюд», чтобы добавить.';
+  renderMealLibrary();
+  document.getElementById('meallib-modal').classList.add('open');
+}
+function renderMealLibrary(){
+  const box = document.getElementById('meallib-list');
+  if(!data.meals.library.length){
+    box.innerHTML = `<div class="wf-none">Библиотека пуста. При добавлении блюда поставь галочку «Сохранить в мои блюда».</div>`;
+    return;
+  }
+  box.innerHTML = data.meals.library.map(it=>`<div class="meallib-item">
+    <div class="meallib-main" ${mealTargetMeal?`onclick="addLibToMeal('${it.id}')"`:''} style="${mealTargetMeal?'cursor:pointer':''}">
+      <div class="meallib-name">${esc(it.name)}</div>
+      <div class="meallib-macros">${it.calories||0} ккал · Б${it.protein||0} Ж${it.fat||0} У${it.carbs||0}${it.cost?` · ${Math.round(it.cost)}₽`:''}</div>
+    </div>
+    <span class="x" onclick="removeLibItem('${it.id}')">✕</span>
+  </div>`).join('');
+}
+function addLibToMeal(libId){
+  const it = data.meals.library.find(x=>x.id===libId); if(!it || !mealTargetMeal) return;
+  dayPlan(mDate())[mealTargetMeal].push({...it, id:uid()});
+  save(); closeModal('meallib-modal'); renderMeals(); toast('Добавлено');
+}
+function removeLibItem(libId){
+  if(!confirm('Удалить блюдо из библиотеки?')) return;
+  data.meals.library = data.meals.library.filter(x=>x.id!==libId);
+  save(); renderMealLibrary();
+}
+
+function macroLine(sum, goals){
+  const chip=(label,val,goal,unit)=>{
+    const g = goal>0 ? ` / ${goal}${unit}` : '';
+    const over = goal>0 && val>goal;
+    return `<span class="macro-chip ${over?'over':''}">${label} <b>${Math.round(val)}${unit}</b>${g}</span>`;
+  };
+  return `<div class="macro-line">
+    ${chip('Ккал', sum.calories, goals.calories, '')}
+    ${chip('Б', sum.protein, goals.protein, 'г')}
+    ${chip('Ж', sum.fat, goals.fat, 'г')}
+    ${chip('У', sum.carbs, goals.carbs, 'г')}
+    ${chip('₽', sum.cost, goals.budget, '')}
+  </div>`;
+}
+
+function renderMeals(){
+  const box = document.getElementById('meals-body');
+  if(!box) return;
+  const goals = data.meals.goals;
+  if(mealView==='week'){ renderMealsWeek(box, goals); return; }
+
+  const key = mDate();
+  const isToday = key===todayKey();
+  const dateLabel = isToday ? 'Сегодня' : new Date(key+'T00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+  const p = getDayPlan(key);
+  const daySum = sumDay(key);
+
+  const mealsHtml = MEAL_TYPES.map(m=>{
+    const items = (p && p[m.id]) || [];
+    const ms = sumItems(items);
+    const itemsHtml = items.length ? items.map(i=>`<div class="meal-item">
+      <div class="meal-item-main">
+        <div class="meal-item-name">${esc(i.name)}</div>
+        <div class="meal-item-macros">${i.calories||0} ккал · Б${i.protein||0} Ж${i.fat||0} У${i.carbs||0}${i.cost?` · ${Math.round(i.cost)}₽`:''}${i.note?` · ${esc(i.note)}`:''}</div>
+      </div>
+      <span class="x" onclick="removeMealItem('${m.id}','${i.id}')">✕</span>
+    </div>`).join('') : `<div class="meal-empty-mini">пусто</div>`;
+    return `<div class="meal-block">
+      <div class="meal-block-head">
+        <span class="meal-block-title">${m.emoji} ${m.label}</span>
+        ${items.length?`<span class="meal-block-sum">${Math.round(ms.calories)} ккал${ms.cost?` · ${Math.round(ms.cost)}₽`:''}</span>`:''}
+      </div>
+      <div class="meal-items">${itemsHtml}</div>
+      <div class="meal-add-row">
+        <button class="btn btn-ghost btn-sm" onclick="openMealModal('${m.id}')">+ блюдо</button>
+        <button class="btn btn-ghost btn-sm" onclick="openMealLibrary('${m.id}')">из моих блюд</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  box.innerHTML = `
+    <div class="jnav">
+      <button class="icon-btn" onclick="mealDayShift(-1)">‹</button>
+      <span class="jdate">${dateLabel}</span>
+      <button class="icon-btn" onclick="mealDayShift(1)">›</button>
+      ${!isToday?`<button class="btn btn-ghost btn-sm" onclick="mealGoToToday()">сегодня</button>`:''}
+    </div>
+    <div class="meal-summary">
+      <h4 class="jsub" style="margin-bottom:10px">Итого за день</h4>
+      ${macroLine(daySum, goals)}
+    </div>
+    ${mealsHtml}
+  `;
+}
+
+function renderMealsWeek(box, goals){
+  // week starting Monday containing mDate()
+  const key = mDate();
+  const [y,m,d] = key.split('-').map(Number);
+  const dt = new Date(Date.UTC(y,m-1,d));
+  const dow = (dt.getUTCDay()+6)%7; // 0=Mon
+  const monday = addDaysKey(key, -dow);
+  const weekKeys = Array.from({length:7},(_,i)=>addDaysKey(monday,i));
+  const WDL = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  let weekSum = {calories:0,protein:0,fat:0,carbs:0,cost:0};
+  const rows = weekKeys.map((k,i)=>{
+    const s = sumDay(k);
+    weekSum.calories+=s.calories; weekSum.protein+=s.protein; weekSum.fat+=s.fat; weekSum.carbs+=s.carbs; weekSum.cost+=s.cost;
+    const dd = new Date(k+'T00:00');
+    const isToday = k===todayKey();
+    return `<div class="meal-week-row ${isToday?'today':''}" onclick="mealOpenDay('${k}')">
+      <div class="mw-day">${WDL[i]} <span>${dd.getDate()}.${String(dd.getMonth()+1).padStart(2,'0')}</span></div>
+      <div class="mw-macros">${s.calories?`${Math.round(s.calories)} ккал · Б${Math.round(s.protein)} Ж${Math.round(s.fat)} У${Math.round(s.carbs)}${s.cost?` · ${Math.round(s.cost)}₽`:''}`:'<span style="color:var(--text-faint)">пусто</span>'}</div>
+    </div>`;
+  }).join('');
+
+  const goalWeekCal = goals.calories>0 ? goals.calories*7 : 0;
+  const goalWeekBudget = goals.budget>0 ? goals.budget*7 : 0;
+
+  box.innerHTML = `
+    <div class="jnav">
+      <button class="icon-btn" onclick="mealDayShift(-7)">‹ неделя</button>
+      <span class="jdate">${new Date(monday+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})} — ${new Date(weekKeys[6]+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}</span>
+      <button class="icon-btn" onclick="mealDayShift(7)">неделя ›</button>
+    </div>
+    <div class="meal-summary">
+      <h4 class="jsub" style="margin-bottom:10px">Итого за неделю</h4>
+      <div class="macro-line">
+        <span class="macro-chip">Ккал <b>${Math.round(weekSum.calories)}</b>${goalWeekCal?` / ${goalWeekCal}`:''}</span>
+        <span class="macro-chip">Б <b>${Math.round(weekSum.protein)}г</b></span>
+        <span class="macro-chip">Ж <b>${Math.round(weekSum.fat)}г</b></span>
+        <span class="macro-chip">У <b>${Math.round(weekSum.carbs)}г</b></span>
+        <span class="macro-chip ${goalWeekBudget&&weekSum.cost>goalWeekBudget?'over':''}">₽ <b>${Math.round(weekSum.cost)}</b>${goalWeekBudget?` / ${goalWeekBudget}`:''}</span>
+      </div>
+    </div>
+    <div class="meal-week">${rows}</div>
+  `;
+}
+function mealOpenDay(key){ mealDate = key===todayKey()?null:key; setMealView('day'); }
 
 /* ============ HABITS ============ */
 const HABIT_EMOJIS = ['📖','🏃','💧','🧘','💪','✍️','🎸','🌱','☀️','🧠','💤','🥗','🚭','🧹','📱','🙏','🎯','🚿','🥦','⏰','🎨','🧊'];
