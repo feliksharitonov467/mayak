@@ -365,6 +365,32 @@
   .meallib-item .x:hover { color: var(--rose); }
   .meal-import-target { display: flex; gap: 12px; }
 
+  /* ---------- Calendar ---------- */
+  .cal-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .cal-month { font-size: 16px; font-weight: 600; text-transform: capitalize; min-width: 160px; text-align: center; }
+  .cal-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+  .cal-leg { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-faint); }
+  .cal-dot { width: 8px; height: 8px; border-radius: 99px; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
+  .cal-wd { text-align: center; font-size: 11px; color: var(--text-faint); padding-bottom: 4px; }
+  .cal-cell {
+    min-height: 64px; border: 1px solid var(--line); background: var(--panel); border-radius: 9px;
+    padding: 7px 8px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; transition: .12s; position: relative;
+  }
+  .cal-cell.empty { background: none; border: none; cursor: default; }
+  .cal-cell:not(.empty):hover { border-color: var(--amber-soft); }
+  .cal-cell.today { border-color: var(--amber); }
+  .cal-cell.today .cal-num { color: var(--amber); font-weight: 700; }
+  .cal-cell.sel { background: var(--panel-2); border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber) inset; }
+  .cal-num { font-size: 13px; color: var(--text-dim); }
+  .cal-dots { display: flex; flex-wrap: wrap; gap: 3px; margin-top: auto; }
+  .cal-cd { width: 6px; height: 6px; border-radius: 99px; }
+  .cal-ev-list { display: flex; flex-direction: column; gap: 7px; }
+  .cal-ev { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
+  .cal-ev-icon { flex: none; width: 20px; text-align: center; }
+  .cal-ev-text { font-size: 13.5px; }
+  .cal-ev-text.done { text-decoration: line-through; color: var(--text-faint); }
+
   /* ---------- Habits ---------- */
   .habit-row {
     display: flex; align-items: center; gap: 16px; padding: 16px 18px;
@@ -762,6 +788,10 @@
     .jscore-card { flex-direction: column; align-items: stretch; gap: 12px; text-align: center; }
     .win-weakness-grid { grid-template-columns: 1fr; }
     .meal-macros-grid { grid-template-columns: repeat(2,1fr); }
+    .cal-cell { min-height: 46px; padding: 4px 3px; gap: 3px; }
+    .cal-num { font-size: 11px; }
+    .cal-grid { gap: 3px; }
+    .cal-legend { gap: 8px; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -833,6 +863,7 @@
 <div class="layout">
   <nav class="side">
     <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
+    <button data-view="calendar"><span class="ic">📅</span> Календарь</button>
     <button data-view="projects"><span class="ic">▤</span> Проекты</button>
     <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
     <button data-view="habits"><span class="ic">✦</span> Привычки</button>
@@ -864,6 +895,27 @@
         <h3>Привычки за последние 7 дней</h3>
         <div class="chartbars" id="weekchart"></div>
       </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="view" id="view-calendar">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Календарь</h2>
+          <p>Всё важное на одной сетке</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-primary" onclick="openEventModal()">+ Событие</button>
+      </div>
+      <div class="cal-nav">
+        <button class="icon-btn" onclick="calMonthShift(-1)">‹</button>
+        <span class="cal-month" id="cal-month"></span>
+        <button class="icon-btn" onclick="calMonthShift(1)">›</button>
+        <button class="btn btn-ghost btn-sm" onclick="calToday()">сегодня</button>
+      </div>
+      <div class="cal-legend" id="cal-legend"></div>
+      <div id="calendar-body"></div>
+      <div id="cal-day-detail"></div>
     </section>
 
     <!-- PROJECTS -->
@@ -1129,6 +1181,7 @@
 
 <nav class="mobile-tabs">
   <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
+  <button data-view="calendar"><span class="ic">📅</span> Календарь</button>
   <button data-view="projects"><span class="ic">▤</span> Проекты</button>
   <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
   <button data-view="habits"><span class="ic">✦</span> Привычки</button>
@@ -1367,6 +1420,23 @@
   </div>
 </div>
 
+<!-- Event modal -->
+<div class="modal-bg" id="event-modal">
+  <div class="modal">
+    <h3 class="display" id="ev-title">Новое событие</h3>
+    <label class="fld"><span>Название</span><input type="text" id="ev-name" placeholder="Например, встреча с врачом"></label>
+    <label class="fld"><span>Дата</span><input type="date" id="ev-date"></label>
+    <label class="fld"><span>Заметка (необязательно)</span><input type="text" id="ev-note" placeholder="Детали"></label>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-ghost btn-sm" id="ev-delete" onclick="deleteEventFromModal()" style="display:none">Удалить</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn btn-ghost" onclick="closeModal('event-modal')">Отмена</button>
+        <button class="btn btn-primary" onclick="saveEvent()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Habit modal -->
 <div class="modal-bg" id="habit-modal">
   <div class="modal">
@@ -1461,7 +1531,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1490,7 +1560,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1561,6 +1631,7 @@ window.onAuthChange = async function(user) {
       if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
       if (!Array.isArray(data.meals.library)) data.meals.library = [];
       if (!data.meals.goals || typeof data.meals.goals !== 'object') data.meals.goals = {calories:0,protein:0,fat:0,carbs:0,budget:0};
+      if (!Array.isArray(data.events)) data.events = [];
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -1618,6 +1689,7 @@ function switchView(v) {
   if (v === 'wins') renderWins();
   if (v === 'finance') renderFinance();
   if (v === 'meals') { mealDate=null; renderMeals(); }
+  if (v === 'calendar') { calMonth=null; selectedCalDay=todayKey(); renderCalendar(); }
   if (v === 'journalStats') renderJournalStats();
   if (v === 'settings') renderSettings();
   window.scrollTo(0,0);
@@ -2887,6 +2959,140 @@ function confirmMealImport(){
   mealDate = dateKey===todayKey()?null:dateKey;
   save(); closeModal('mealimport-modal'); setMealView('day');
   toast(`Добавлено блюд: ${buf.length}`);
+}
+
+/* ============ CALENDAR ============ */
+let calMonth = null; // {y, m}; null = current
+function calCurrent(){ if(calMonth) return calMonth; const n=new Date(); return {y:+todayKey().slice(0,4), m:+todayKey().slice(5,7)-1}; }
+function calMonthShift(delta){
+  const c = calCurrent();
+  let m=c.m+delta, y=c.y;
+  if(m<0){m=11;y--;} if(m>11){m=0;y++;}
+  calMonth={y,m}; selectedCalDay=null; renderCalendar();
+}
+function calToday(){ calMonth=null; selectedCalDay=todayKey(); renderCalendar(); }
+
+// Gather all events for a given date key from every section
+function eventsForDate(key){
+  const out = [];
+  // tasks with a deadline (not archived/done-old)
+  data.tasks.forEach(t=>{ if(t.due===key && !t.inbox){ out.push({type:'task', color:'var(--rose)', icon:'✓', text:t.txt, done:t.col==='done'}); } });
+  // project deadlines
+  data.projects.forEach(p=>{ if(p.due===key){ out.push({type:'project', color:'var(--amber)', icon:'▤', text:'Проект: '+p.name+' ('+projectPct(p)+'%)'}); } });
+  // wheel deadline
+  if(data.wheel && data.wheel.deadline===key){ out.push({type:'wheel', color:'var(--violet)', icon:'◍', text:'Колесо жизни — срок'}); }
+  // day rating
+  if(data.days[key] && data.days[key].score>0){ out.push({type:'day', color:'var(--teal)', icon:'☺', text:'Оценка дня: '+data.days[key].score+'/10'}); }
+  // wins
+  data.wins.forEach(w=>{ if(w.date===key){ out.push({type:'win', color:'var(--teal)', icon:'🏆', text:'Победа: '+w.weakness}); } });
+  // meals planned
+  const mp = data.meals.plan[key];
+  if(mp){ const cnt = MEAL_TYPES.reduce((a,m)=>a+((mp[m.id]||[]).length),0); if(cnt) out.push({type:'meal', color:'var(--amber-soft)', icon:'🍽', text:cnt+' '+plural(cnt,'блюдо','блюда','блюд')+' в плане'}); }
+  // finance operations
+  data.finance.operations.forEach(o=>{ if(o.date===key){ out.push({type:'fin', color:o.type==='expense'?'var(--rose)':'var(--teal)', icon:'₽', text:(o.type==='expense'?'−':'+')+Math.round(o.amount)+'₽ '+(o.category||'доход')}); } });
+  // custom events
+  data.events.forEach(e=>{ if(e.date===key){ out.push({type:'event', color:'var(--amber)', icon:'★', text:e.name, eventId:e.id}); } });
+  return out;
+}
+
+let selectedCalDay = null;
+function renderCalendar(){
+  const body = document.getElementById('calendar-body');
+  if(!body) return;
+  const c = calCurrent();
+  const monthName = new Date(c.y, c.m, 1).toLocaleDateString('ru-RU',{month:'long', year:'numeric'});
+  document.getElementById('cal-month').textContent = monthName;
+
+  // legend
+  document.getElementById('cal-legend').innerHTML = [
+    ['var(--rose)','задачи'],['var(--amber)','проекты/события'],['var(--teal)','дни/победы'],['var(--violet)','колесо'],['var(--amber-soft)','питание']
+  ].map(([col,lbl])=>`<span class="cal-leg"><span class="cal-dot" style="background:${col}"></span>${lbl}</span>`).join('');
+
+  const first = new Date(c.y, c.m, 1);
+  const startOffset = (first.getDay()+6)%7;
+  const daysInMonth = new Date(c.y, c.m+1, 0).getDate();
+  const tk = todayKey();
+  const WDH = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+
+  let cells = WDH.map(w=>`<div class="cal-wd">${w}</div>`).join('');
+  for(let i=0;i<startOffset;i++) cells += `<div class="cal-cell empty"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const key = `${c.y}-${String(c.m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const evs = eventsForDate(key);
+    const isToday = key===tk;
+    const isSel = key===selectedCalDay;
+    // up to 3 dots by unique color
+    const colors = [...new Set(evs.map(e=>e.color))].slice(0,4);
+    const dots = colors.map(col=>`<span class="cal-cd" style="background:${col}"></span>`).join('');
+    cells += `<div class="cal-cell ${isToday?'today':''} ${isSel?'sel':''} ${evs.length?'has':''}" onclick="selectCalDay('${key}')">
+      <span class="cal-num">${d}</span>
+      <div class="cal-dots">${dots}</div>
+    </div>`;
+  }
+  body.innerHTML = `<div class="cal-grid">${cells}</div>`;
+
+  renderCalDayDetail();
+}
+function selectCalDay(key){ selectedCalDay = (selectedCalDay===key)?null:key; renderCalendar(); }
+function renderCalDayDetail(){
+  const box = document.getElementById('cal-day-detail');
+  if(!box) return;
+  if(!selectedCalDay){ box.innerHTML=''; return; }
+  const evs = eventsForDate(selectedCalDay);
+  const dl = new Date(selectedCalDay+'T00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+  const list = evs.length ? evs.map(e=>`<div class="cal-ev" ${e.eventId?`onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`:''}>
+      <span class="cal-ev-icon" style="color:${e.color}">${e.icon}</span>
+      <span class="cal-ev-text ${e.done?'done':''}">${esc(e.text)}</span>
+    </div>`).join('') : `<div class="wf-none">На этот день ничего не запланировано.</div>`;
+  box.innerHTML = `<div class="chart-wrap" style="margin-top:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0;text-transform:capitalize">${dl}</h3>
+      <button class="btn btn-ghost btn-sm" onclick="openEventModal(null,'${selectedCalDay}')">+ событие на день</button>
+    </div>
+    <div class="cal-ev-list">${list}</div>
+  </div>`;
+}
+
+/* ----- custom events ----- */
+let editingEventId = null;
+function openEventModal(id, presetDate){
+  editingEventId = id||null;
+  if(id){
+    const e = data.events.find(x=>x.id===id);
+    document.getElementById('ev-title').textContent='Изменить событие';
+    document.getElementById('ev-name').value=e.name;
+    document.getElementById('ev-date').value=e.date;
+    document.getElementById('ev-note').value=e.note||'';
+    document.getElementById('ev-delete').style.display='';
+  } else {
+    document.getElementById('ev-title').textContent='Новое событие';
+    document.getElementById('ev-name').value='';
+    document.getElementById('ev-date').value=presetDate||selectedCalDay||todayKey();
+    document.getElementById('ev-note').value='';
+    document.getElementById('ev-delete').style.display='none';
+  }
+  document.getElementById('event-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('ev-name').focus(),50);
+}
+function saveEvent(){
+  const name=document.getElementById('ev-name').value.trim();
+  if(!name){ toast('Впиши название'); return; }
+  const date=document.getElementById('ev-date').value||todayKey();
+  const note=document.getElementById('ev-note').value.trim();
+  if(editingEventId){
+    const e=data.events.find(x=>x.id===editingEventId);
+    e.name=name; e.date=date; e.note=note;
+  } else {
+    data.events.push({ id:uid(), name, date, note, created:Date.now() });
+    selectedCalDay=date;
+  }
+  save(); closeModal('event-modal'); renderCalendar(); toast('Событие сохранено');
+}
+function deleteEventFromModal(){
+  if(!editingEventId) return;
+  if(!confirm('Удалить событие?')) return;
+  data.events=data.events.filter(e=>e.id!==editingEventId);
+  save(); closeModal('event-modal'); renderCalendar();
 }
 
 /* ============ HABITS ============ */
