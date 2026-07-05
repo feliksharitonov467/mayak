@@ -321,6 +321,12 @@
   .fincat-item .x:hover { color: var(--rose); }
   .fin-import-err { color: var(--rose); font-size: 13px; padding: 10px 12px; background: rgba(240,120,138,.08); border-radius: 8px; }
   .fin-import-ok { color: var(--teal); font-size: 13px; padding: 10px 12px; background: rgba(90,209,184,.08); border-radius: 8px; }
+  .fin-period { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  .fin-per { border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); border-radius: 99px; padding: 6px 13px; font-size: 12.5px; cursor: pointer; font-family: inherit; transition: .12s; }
+  .fin-per:hover { border-color: var(--amber-soft); }
+  .fin-per.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); font-weight: 600; }
+  .fin-custom-range { display: flex; gap: 12px; margin-bottom: 14px; }
+  .fin-range-label { font-size: 12px; color: var(--text-faint); margin-bottom: 8px; text-transform: capitalize; }
 
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
@@ -812,6 +818,7 @@
     .cal-num { font-size: 11px; }
     .cal-grid { gap: 3px; }
     .cal-legend { gap: 8px; }
+    .fin-custom-range { flex-direction: column; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -2465,6 +2472,72 @@ function currentMonth(){ return todayKey().slice(0,7); }
 // operations in a given month (default: current)
 function opsInMonth(mk){ return fin().operations.filter(o=>monthKey(o.date)===(mk||currentMonth())); }
 
+// ---- Period filtering ----
+let finPeriod = 'month';            // today|yesterday|week|lastweek|month|lastmonth|all|custom
+let finCustomFrom = '', finCustomTo = '';
+// Monday-based start of the week containing `key`
+function weekStartKey(key){
+  const [y,m,d] = key.split('-').map(Number);
+  const dt = new Date(Date.UTC(y,m-1,d));
+  const dow = (dt.getUTCDay()+6)%7; // 0=Mon
+  return addDaysKey(key, -dow);
+}
+// returns {from, to, label, days} for the active period (inclusive date keys)
+function finPeriodRange(){
+  const tk = todayKey();
+  switch(finPeriod){
+    case 'today': return { from:tk, to:tk, label:'сегодня' };
+    case 'yesterday': { const y=addDaysKey(tk,-1); return { from:y, to:y, label:'вчера' }; }
+    case 'week': { const s=weekStartKey(tk); return { from:s, to:tk, label:'эта неделя' }; }
+    case 'lastweek': { const s=addDaysKey(weekStartKey(tk),-7); return { from:s, to:addDaysKey(s,6), label:'прошлая неделя' }; }
+    case 'month': { const s=tk.slice(0,8)+'01'; return { from:s, to:tk, label:'этот месяц' }; }
+    case 'lastmonth': {
+      const [y,m]=tk.split('-').map(Number);
+      const pm = m===1?12:m-1, py = m===1?y-1:y;
+      const from = `${py}-${String(pm).padStart(2,'0')}-01`;
+      const lastDay = new Date(py, pm, 0).getDate();
+      const to = `${py}-${String(pm).padStart(2,'0')}-${String(lastDay).padStart(2,'0')}`;
+      return { from, to, label:'прошлый месяц' };
+    }
+    case 'custom': {
+      const from = finCustomFrom||tk, to = finCustomTo||tk;
+      return from<=to ? { from, to, label:'период' } : { from:to, to:from, label:'период' };
+    }
+    case 'all':
+    default: {
+      const dates = fin().operations.map(o=>o.date).filter(Boolean).sort();
+      return { from: dates[0]||tk, to: tk, label:'всё время', all: finPeriod==='all' };
+    }
+  }
+}
+function opsInPeriod(){
+  if(finPeriod==='all') return fin().operations.slice();
+  const {from,to} = finPeriodRange();
+  return fin().operations.filter(o=>o.date>=from && o.date<=to);
+}
+// number of days in the active period (for averages)
+function periodDays(){
+  const {from,to} = finPeriodRange();
+  if(finPeriod==='all'){
+    const dates = fin().operations.map(o=>o.date).filter(Boolean).sort();
+    if(!dates.length) return 1;
+    return Math.max(1, daysBetween(dates[0], todayKey())+1);
+  }
+  return Math.max(1, daysBetween(from, to)+1);
+}
+function daysBetween(a,b){
+  const [ay,am,ad]=a.split('-').map(Number), [by,bm,bd]=b.split('-').map(Number);
+  return Math.round((Date.UTC(by,bm-1,bd)-Date.UTC(ay,am-1,ad))/86400000);
+}
+function setFinPeriod(p){
+  finPeriod = p;
+  renderFinance();
+}
+function setFinCustom(which, val){
+  if(which==='from') finCustomFrom=val; else finCustomTo=val;
+  finPeriod='custom'; renderFinance();
+}
+
 let editingOpId = null;
 let opTypeDraft = 'expense';
 function setOpType(t){
@@ -2597,73 +2670,91 @@ function renderFinance(){
   const box = document.getElementById('finance-body');
   if(!box) return;
   const f = fin();
-  const mk = currentMonth();
-  const monthOps = opsInMonth(mk);
-  const expenses = monthOps.filter(o=>o.type==='expense');
-  const incomes = monthOps.filter(o=>o.type==='income');
+
+  // ----- period selector -----
+  const periods = [
+    ['today','Сегодня'],['yesterday','Вчера'],['week','Эта неделя'],['lastweek','Прошлая неделя'],
+    ['month','Этот месяц'],['lastmonth','Прошлый месяц'],['all','Всё время'],['custom','Период…']
+  ];
+  const periodBar = `<div class="fin-period">
+    ${periods.map(([id,lbl])=>`<button class="fin-per ${finPeriod===id?'on':''}" onclick="setFinPeriod('${id}')">${lbl}</button>`).join('')}
+  </div>
+  ${finPeriod==='custom'?`<div class="fin-custom-range">
+    <label class="fld" style="flex:1"><span>С</span><input type="date" value="${finCustomFrom}" onchange="setFinCustom('from',this.value)"></label>
+    <label class="fld" style="flex:1"><span>По</span><input type="date" value="${finCustomTo}" onchange="setFinCustom('to',this.value)"></label>
+  </div>`:''}`;
+
+  // ----- period-scoped data -----
+  const range = finPeriodRange();
+  const ops = opsInPeriod();
+  const expenses = ops.filter(o=>o.type==='expense');
+  const incomes = ops.filter(o=>o.type==='income');
   const spent = expenses.reduce((a,o)=>a+o.amount,0);
   const earned = incomes.reduce((a,o)=>a+o.amount,0);
+  const pdays = periodDays();
+  const avgPerDay = spent/pdays;
+
+  // budget is monthly — show only when viewing month-like periods
   const budget = f.budget||0;
-  const remain = budget - spent;
-
-  // day-based metrics
-  const now = new Date();
-  const [yy,mm] = mk.split('-').map(Number);
-  const daysInMonth = new Date(yy, mm, 0).getDate();
+  const monthSpent = opsInMonth().filter(o=>o.type==='expense').reduce((a,o)=>a+o.amount,0);
+  const remain = budget - monthSpent;
+  const daysInMonth = new Date(+todayKey().slice(0,4), +todayKey().slice(5,7), 0).getDate();
   const dayNow = Math.min(daysInMonth, Number(todayKey().slice(8,10)));
-  const avgPerDay = dayNow>0 ? spent/dayNow : 0;
-  const forecast = avgPerDay*daysInMonth;
+  const monthForecast = dayNow>0 ? (monthSpent/dayNow)*daysInMonth : 0;
 
-  // category breakdown (expenses)
+  // category breakdown for the period
   const catSum = {};
   expenses.forEach(o=>{ const c=o.category||'Другое'; catSum[c]=(catSum[c]||0)+o.amount; });
   const topCats = Object.entries(catSum).sort((a,b)=>b[1]-a[1]);
   const maxCat = topCats.length?topCats[0][1]:1;
+  const topCatName = topCats.length?topCats[0][0]:'—';
 
-  const monthName = new Date(yy, mm-1, 1).toLocaleDateString('ru-RU',{month:'long', year:'numeric'});
-
-  // budget progress
-  const budgetPct = budget>0 ? Math.min(100, Math.round(spent/budget*100)) : 0;
-  const overBudget = budget>0 && spent>budget;
-
+  // budget card (always month-based)
+  const budgetPct = budget>0 ? Math.min(100, Math.round(monthSpent/budget*100)) : 0;
+  const overBudget = budget>0 && monthSpent>budget;
+  const monthName = new Date(+todayKey().slice(0,4), +todayKey().slice(5,7)-1, 1).toLocaleDateString('ru-RU',{month:'long'});
   const budgetCard = budget>0 ? `
     <div class="fin-budget">
       <div class="fin-budget-head">
         <span>Бюджет на ${monthName}</span>
-        <span><b>${fmtMoney(spent)}</b> из ${fmtMoney(budget)} · <span class="icon-btn" style="display:inline;color:var(--amber)" onclick="openBudgetModal()">изменить</span></span>
+        <span><b>${fmtMoney(monthSpent)}</b> из ${fmtMoney(budget)} · <span class="icon-btn" style="display:inline;color:var(--amber)" onclick="openBudgetModal()">изменить</span></span>
       </div>
       <div class="bar ${overBudget?'':'teal'}"><i style="width:${budgetPct}%;${overBudget?'background:var(--rose)':''}"></i></div>
-      <div class="fin-budget-foot ${remain<0?'over':''}">${remain>=0?`осталось ${fmtMoney(remain)}`:`перерасход ${fmtMoney(-remain)}`}</div>
+      <div class="fin-budget-foot ${remain<0?'over':''}">${remain>=0?`осталось ${fmtMoney(remain)} · прогноз ${fmtMoney(monthForecast)}`:`перерасход ${fmtMoney(-remain)}`}</div>
     </div>` : `
     <div class="fin-budget fin-budget-empty">
       <span>Бюджет на месяц не задан</span>
       <button class="btn btn-ghost btn-sm" onclick="openBudgetModal()">Поставить бюджет</button>
     </div>`;
 
-  // metric cards
+  // range label for metrics
+  const rangeLabel = finPeriod==='all' ? 'за всё время'
+    : range.from===range.to ? `за ${new Date(range.from+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}`
+    : `${new Date(range.from+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})} — ${new Date(range.to+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}`;
+
   const metrics = `
+    <div class="fin-range-label">Показатели ${rangeLabel}</div>
     <div class="fin-metrics">
-      <div class="fin-metric"><div class="fm-n" style="color:var(--rose)">${fmtMoney(spent)}</div><div class="fm-l">потрачено в этом месяце</div></div>
-      <div class="fin-metric"><div class="fm-n" style="color:var(--teal)">${fmtMoney(earned)}</div><div class="fm-l">доходы за месяц</div></div>
-      <div class="fin-metric"><div class="fm-n" style="color:${earned-spent>=0?'var(--teal)':'var(--rose)'}">${fmtMoney(earned-spent)}</div><div class="fm-l">баланс месяца</div></div>
+      <div class="fin-metric"><div class="fm-n" style="color:var(--rose)">${fmtMoney(spent)}</div><div class="fm-l">потрачено</div></div>
+      <div class="fin-metric"><div class="fm-n" style="color:var(--teal)">${fmtMoney(earned)}</div><div class="fm-l">доходы</div></div>
+      <div class="fin-metric"><div class="fm-n" style="color:${earned-spent>=0?'var(--teal)':'var(--rose)'}">${fmtMoney(earned-spent)}</div><div class="fm-l">баланс</div></div>
       <div class="fin-metric"><div class="fm-n">${fmtMoney(avgPerDay)}</div><div class="fm-l">средний расход в день</div></div>
-      <div class="fin-metric"><div class="fm-n">${fmtMoney(forecast)}</div><div class="fm-l">прогноз до конца месяца</div></div>
+      <div class="fin-metric"><div class="fm-n" style="font-size:16px">${esc(topCatName)}</div><div class="fm-l">крупнейшая категория</div></div>
     </div>`;
 
-  // category bars
   const catBlock = topCats.length ? `
     <div class="chart-wrap" style="margin-bottom:20px">
-      <h3>Крупнейшие категории расходов</h3>
-      ${topCats.slice(0,8).map(([c,s])=>`<div class="jrbar-row">
+      <h3>Категории расходов ${rangeLabel}</h3>
+      ${topCats.slice(0,10).map(([c,s])=>`<div class="jrbar-row">
         <span class="jrbar-label">${esc(c)}</span>
         <span class="jrbar"><i style="width:${Math.round(s/maxCat*100)}%;background:var(--amber)"></i></span>
         <span class="jrbar-n" style="width:auto">${fmtMoney(s)}</span>
       </div>`).join('')}
     </div>` : '';
 
-  // history (all operations, newest first by date then creation)
-  const allOps = f.operations.slice().sort((a,b)=> b.date!==a.date ? (a.date<b.date?1:-1) : b.created-a.created);
-  const historyHtml = allOps.length ? allOps.slice(0,80).map(o=>{
+  // history — operations within the period, newest first
+  const periodOps = ops.slice().sort((a,b)=> b.date!==a.date ? (a.date<b.date?1:-1) : b.created-a.created);
+  const historyHtml = periodOps.length ? periodOps.slice(0,120).map(o=>{
     const dl = new Date(o.date+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
     const isExp = o.type==='expense';
     return `<div class="fin-op" onclick="openOpModal('${o.type}','${o.id}')">
@@ -2674,15 +2765,16 @@ function renderFinance(){
       </div>
       <div class="fin-op-amount ${isExp?'exp':'inc'}">${isExp?'−':'+'}${fmtMoney(o.amount).replace('−','')}</div>
     </div>`;
-  }).join('') : `<div class="wf-none">Операций пока нет. Добавь первую или импортируй.</div>`;
+  }).join('') : `<div class="wf-none">За этот период операций нет.</div>`;
 
   box.innerHTML = `
+    ${periodBar}
     ${budgetCard}
     ${metrics}
     ${catBlock}
     <div class="chart-wrap">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <h3 style="margin:0">История операций</h3>
+        <h3 style="margin:0">Операции ${finPeriod==='all'?'':rangeLabel}</h3>
         <div style="display:flex;gap:8px">
           <button class="btn btn-ghost btn-sm" onclick="openFinCats()">Категории</button>
           <button class="btn btn-ghost btn-sm" onclick="openOpModal('income')">+ Доход</button>
