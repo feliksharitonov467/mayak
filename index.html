@@ -326,7 +326,7 @@
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
   .meal-tab { border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); border-radius: 99px; padding: 7px 18px; cursor: pointer; font-family: inherit; font-size: 13.5px; transition: .12s; }
   .meal-tab.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); font-weight: 600; }
-  .meal-macros-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; }
+  .meal-macros-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 10px 14px; }
   .meal-macros-grid .fld { margin-bottom: 14px; }
   .meal-savelib { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dim); margin-bottom: 14px; cursor: pointer; }
   .meal-savelib input { width: auto; }
@@ -363,6 +363,7 @@
   .meallib-macros { font-size: 11.5px; color: var(--text-faint); margin-top: 2px; }
   .meallib-item .x { color: var(--text-faint); cursor: pointer; }
   .meallib-item .x:hover { color: var(--rose); }
+  .meal-import-target { display: flex; gap: 12px; }
 
   /* ---------- Habits ---------- */
   .habit-row {
@@ -989,6 +990,7 @@
           <p>Планируй еду, считай КБЖУ и бюджет</p>
         </div>
         <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="openMealImport()">⇧ Импорт</button>
         <button class="btn btn-ghost" onclick="openMealGoals()">🎯 Цели</button>
         <button class="btn btn-ghost" onclick="openMealLibrary()">📚 Мои блюда</button>
       </div>
@@ -1336,6 +1338,31 @@
     <div id="meallib-list" class="meallib-list"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="closeModal('meallib-modal')">Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- Meal import modal -->
+<div class="modal-bg" id="mealimport-modal">
+  <div class="modal modal-wide">
+    <h3 class="display">Импорт еды</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:10px">Опиши ИИ, что ты ел, попроси вернуть JSON — и вставь его сюда. Блюда добавятся в выбранный день и приём пищи.</p>
+    <div class="meal-import-target">
+      <label class="fld" style="flex:1"><span>День</span><input type="date" id="mealimport-date"></label>
+      <label class="fld" style="flex:1"><span>Приём пищи</span><select id="mealimport-meal"></select></label>
+    </div>
+    <textarea id="mealimport-text" rows="7" placeholder='[{"name":"Овсянка с бананом","calories":350,"protein":12,"fat":8,"carbs":55,"cost":80}]' style="font-family:monospace;font-size:12.5px"></textarea>
+    <div id="mealimport-preview" style="margin-top:10px"></div>
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;color:var(--amber);font-size:13px">Показать формат и промпт для ИИ</summary>
+      <div style="font-size:12.5px;color:var(--text-dim);margin-top:8px;line-height:1.6">
+        Каждое блюдо: <code>name</code> (текст), <code>calories</code>, <code>protein</code>, <code>fat</code>, <code>carbs</code> (числа), <code>cost</code> (₽, необязательно), <code>note</code> (необязательно).<br>
+        <b>Промпт для ИИ:</b> «Я ел: [опиши еду и порции]. Оцени КБЖУ и верни JSON-массив объектов с полями name, calories, protein, fat, carbs, cost, note. Только JSON, без пояснений.»
+      </div>
+    </details>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('mealimport-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="doMealImport()">Проверить и добавить</button>
     </div>
   </div>
 </div>
@@ -2813,6 +2840,54 @@ function renderMealsWeek(box, goals){
   `;
 }
 function mealOpenDay(key){ mealDate = key===todayKey()?null:key; setMealView('day'); }
+
+/* ----- Meal JSON import (AI-assisted, like finance) ----- */
+function openMealImport(){
+  document.getElementById('mealimport-date').value = mDate();
+  document.getElementById('mealimport-meal').innerHTML = MEAL_TYPES.map(m=>`<option value="${m.id}">${m.emoji} ${m.label}</option>`).join('');
+  document.getElementById('mealimport-text').value='';
+  document.getElementById('mealimport-preview').innerHTML='';
+  document.getElementById('mealimport-modal').classList.add('open');
+}
+function doMealImport(){
+  const raw = document.getElementById('mealimport-text').value.trim();
+  const prev = document.getElementById('mealimport-preview');
+  if(!raw){ prev.innerHTML='<div class="fin-import-err">Пусто — вставь JSON</div>'; return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch(e){ prev.innerHTML=`<div class="fin-import-err">Не удалось разобрать JSON: ${esc(e.message)}</div>`; return; }
+  // allow either an array, or a single object
+  if(!Array.isArray(parsed)) parsed = [parsed];
+  const valid=[]; const errors=[];
+  parsed.forEach((o,i)=>{
+    const name = (o.name!=null) ? String(o.name).trim() : '';
+    if(!name){ errors.push(`#${i+1}: нет названия`); return; }
+    valid.push({
+      id: uid(), name,
+      calories:+o.calories||0, protein:+o.protein||0, fat:+o.fat||0, carbs:+o.carbs||0,
+      cost:+o.cost||0, note:o.note?String(o.note):''
+    });
+  });
+  if(!valid.length){ prev.innerHTML=`<div class="fin-import-err">Не найдено корректных блюд.<br>${errors.slice(0,5).join('<br>')}</div>`; return; }
+  const s = valid.reduce((a,x)=>({cal:a.cal+x.calories,cost:a.cost+x.cost}),{cal:0,cost:0});
+  prev.innerHTML = `<div class="fin-import-ok">Готово к добавлению: <b>${valid.length}</b> блюд · ${Math.round(s.cal)} ккал${s.cost?` · ${Math.round(s.cost)}₽`:''}.
+    ${errors.length?`<br><span style="color:var(--text-faint)">Пропущено: ${errors.length}</span>`:''}
+    <div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="confirmMealImport()">Добавить ${valid.length} блюд</button></div></div>`;
+  window._mealImportBuffer = valid;
+}
+function confirmMealImport(){
+  const buf = window._mealImportBuffer || [];
+  if(!buf.length) return;
+  const dateKey = document.getElementById('mealimport-date').value || todayKey();
+  const mealId = document.getElementById('mealimport-meal').value || 'breakfast';
+  const p = dayPlan(dateKey);
+  buf.forEach(it=>p[mealId].push({...it, id:uid()}));
+  window._mealImportBuffer = null;
+  // if importing into a non-active day, jump to it so the user sees the result
+  mealDate = dateKey===todayKey()?null:dateKey;
+  save(); closeModal('mealimport-modal'); setMealView('day');
+  toast(`Добавлено блюд: ${buf.length}`);
+}
 
 /* ============ HABITS ============ */
 const HABIT_EMOJIS = ['📖','🏃','💧','🧘','💪','✍️','🎸','🌱','☀️','🧠','💤','🥗','🚭','🧹','📱','🙏','🎯','🚿','🥦','⏰','🎨','🧊'];
