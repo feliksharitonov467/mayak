@@ -327,6 +327,21 @@
   .fin-per.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); font-weight: 600; }
   .fin-custom-range { display: flex; gap: 12px; margin-bottom: 14px; }
   .fin-range-label { font-size: 12px; color: var(--text-faint); margin-bottom: 8px; text-transform: capitalize; }
+  .fincat-block { background: var(--ink-soft); border: 1px solid var(--line); border-radius: 9px; padding: 12px; margin-bottom: 10px; }
+  .fincat-head { display: flex; align-items: center; gap: 10px; }
+  .fincat-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; background: transparent; border: 1px solid transparent; padding: 4px 6px; border-radius: 6px; color: var(--text); }
+  .fincat-name:hover, .fincat-name:focus { border-color: var(--line); background: var(--panel); }
+  .fincat-budget { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--text-faint); flex: none; }
+  .fincat-budget-in { width: 88px; padding: 5px 8px; font-size: 13px; }
+  .fincat-head .x { color: var(--text-faint); cursor: pointer; flex: none; }
+  .fincat-head .x:hover { color: var(--rose); }
+  .subcat-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .subcat-chip { font-size: 11.5px; color: var(--text-dim); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+  .subcat-x { color: var(--text-faint); cursor: pointer; margin-left: 3px; }
+  .subcat-x:hover { color: var(--rose); }
+  .subcat-add { font-size: 12px; padding: 5px 8px; width: 140px; }
+  .catbudget-row { margin-bottom: 12px; }
+  .catbudget-head { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-dim); margin-bottom: 5px; }
 
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
@@ -1304,7 +1319,8 @@
       <button id="op-type-income" class="op-type" onclick="setOpType('income')">Доход</button>
     </div>
     <label class="fld"><span>Сумма, ₽</span><input type="number" id="op-amount" inputmode="decimal" placeholder="0"></label>
-    <label class="fld" id="op-cat-field"><span>Категория</span><select id="op-category"></select></label>
+    <label class="fld" id="op-cat-field"><span>Категория</span><select id="op-category" onchange="updateOpSubcats()"></select></label>
+    <label class="fld" id="op-subcat-field" style="display:none"><span>Подкатегория</span><select id="op-subcategory"></select></label>
     <label class="fld"><span>Дата</span><input type="date" id="op-date"></label>
     <label class="fld"><span>Комментарий (необязательно)</span><input type="text" id="op-note" placeholder="За что"></label>
     <div class="modal-actions" style="justify-content:space-between">
@@ -1331,8 +1347,9 @@
 
 <!-- Categories modal -->
 <div class="modal-bg" id="fincat-modal">
-  <div class="modal">
-    <h3 class="display">Категории трат</h3>
+  <div class="modal modal-wide">
+    <h3 class="display">Категории и бюджеты</h3>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px">У каждой категории можно задать месячный бюджет и подкатегории. Бюджет 0 — не отслеживается.</p>
     <div id="fincat-list" class="fincat-list"></div>
     <div class="win-custom">
       <input type="text" id="fincat-input" placeholder="Новая категория" onkeydown="if(event.key==='Enter'){addFinCategory(this);}">
@@ -1566,7 +1583,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1595,7 +1612,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1662,6 +1679,8 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.finance.categories)) data.finance.categories = ['Еда','Транспорт','Развлечения','Другое'];
       if (!Array.isArray(data.finance.operations)) data.finance.operations = [];
       if (typeof data.finance.budget !== 'number') data.finance.budget = 0;
+      if (!data.finance.subcategories || typeof data.finance.subcategories !== 'object') data.finance.subcategories = {};
+      if (!data.finance.catBudgets || typeof data.finance.catBudgets !== 'object') data.finance.catBudgets = {};
       if (!data.meals || typeof data.meals !== 'object') data.meals = { plan:{}, library:[], goals:{calories:0,protein:0,fat:0,carbs:0,budget:0} };
       if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
       if (!Array.isArray(data.meals.library)) data.meals.library = [];
@@ -2546,6 +2565,20 @@ function setOpType(t){
   document.getElementById('op-type-income').classList.toggle('on', t==='income');
   // category only relevant for expenses
   document.getElementById('op-cat-field').style.display = t==='expense' ? '' : 'none';
+  document.getElementById('op-subcat-field').style.display = (t==='expense' && subcatsFor(document.getElementById('op-category').value).length) ? '' : 'none';
+}
+function subcatsFor(cat){ return (fin().subcategories && fin().subcategories[cat]) || []; }
+function updateOpSubcats(preset){
+  const cat = document.getElementById('op-category').value;
+  const subs = subcatsFor(cat);
+  const field = document.getElementById('op-subcat-field');
+  const sel = document.getElementById('op-subcategory');
+  if(subs.length && opTypeDraft==='expense'){
+    sel.innerHTML = '<option value="">— без подкатегории —</option>' + subs.map(s=>`<option value="${esc(s)}" ${preset===s?'selected':''}>${esc(s)}</option>`).join('');
+    field.style.display = '';
+  } else {
+    sel.innerHTML=''; field.style.display='none';
+  }
 }
 function openOpModal(type, id){
   editingOpId = id||null;
@@ -2559,6 +2592,7 @@ function openOpModal(type, id){
     document.getElementById('op-note').value = o.note||'';
     if(o.category) sel.value = o.category;
     setOpType(o.type);
+    updateOpSubcats(o.subcategory||'');
     document.getElementById('op-delete').style.display = '';
   } else {
     document.getElementById('op-title').textContent = 'Новая операция';
@@ -2566,6 +2600,7 @@ function openOpModal(type, id){
     document.getElementById('op-date').value = todayKey();
     document.getElementById('op-note').value = '';
     setOpType(type||'expense');
+    updateOpSubcats('');
     document.getElementById('op-delete').style.display = 'none';
   }
   document.getElementById('op-modal').classList.add('open');
@@ -2577,12 +2612,13 @@ function saveOp(){
   const date = document.getElementById('op-date').value || todayKey();
   const note = document.getElementById('op-note').value.trim();
   const category = opTypeDraft==='expense' ? document.getElementById('op-category').value : '';
+  const subcategory = opTypeDraft==='expense' ? document.getElementById('op-subcategory').value : '';
   if(editingOpId){
     const o = fin().operations.find(x=>x.id===editingOpId);
-    o.type=opTypeDraft; o.amount=amount; o.date=date; o.note=note; o.category=category;
+    o.type=opTypeDraft; o.amount=amount; o.date=date; o.note=note; o.category=category; o.subcategory=subcategory;
     toast('Операция обновлена');
   } else {
-    fin().operations.push({ id: uid(), type:opTypeDraft, amount, category, date, note, created: Date.now() });
+    fin().operations.push({ id: uid(), type:opTypeDraft, amount, category, subcategory, date, note, created: Date.now() });
     toast('Операция добавлена');
   }
   save(); closeModal('op-modal'); renderFinance();
@@ -2607,20 +2643,70 @@ function saveBudget(){
 function openFinCats(){ renderFinCats(); document.getElementById('fincat-modal').classList.add('open'); }
 function renderFinCats(){
   const box = document.getElementById('fincat-list');
-  box.innerHTML = fin().categories.map((c,i)=>`<div class="fincat-item">
-    <span>${esc(c)}</span>
-    <span class="x" onclick="removeFinCategory(${i})">✕</span>
-  </div>`).join('');
+  const f = fin();
+  box.innerHTML = f.categories.map((c,i)=>{
+    const subs = (f.subcategories[c]||[]);
+    const budget = f.catBudgets[c]||0;
+    const subChips = subs.map((s,si)=>`<span class="subcat-chip">${esc(s)} <span class="subcat-x" onclick="removeSubcat('${esc(c).replace(/'/g,'')}',${si})">✕</span></span>`).join('');
+    return `<div class="fincat-block">
+      <div class="fincat-head">
+        <input class="fincat-name" value="${esc(c)}" onchange="renameFinCategory(${i}, this.value)">
+        <div class="fincat-budget">
+          <span>бюджет ₽</span>
+          <input type="number" class="fincat-budget-in" value="${budget||''}" placeholder="0" onchange="setCatBudget('${esc(c).replace(/'/g,'')}', this.value)">
+        </div>
+        <span class="x" onclick="removeFinCategory(${i})" title="Удалить категорию">✕</span>
+      </div>
+      <div class="subcat-row">
+        ${subChips}
+        <input class="subcat-add" placeholder="+ подкатегория" onkeydown="if(event.key==='Enter'){addSubcat('${esc(c).replace(/'/g,'')}',this);}">
+      </div>
+    </div>`;
+  }).join('');
 }
 function addFinCategory(input){
   const c = input.value.trim(); if(!c) return;
   if(!fin().categories.includes(c)) fin().categories.push(c);
   input.value=''; save(); renderFinCats();
 }
+function renameFinCategory(i, val){
+  const f = fin();
+  const oldName = f.categories[i];
+  const newName = val.trim();
+  if(!newName || newName===oldName){ renderFinCats(); return; }
+  if(f.categories.includes(newName)){ toast('Такая категория уже есть'); renderFinCats(); return; }
+  f.categories[i] = newName;
+  // migrate subcategories, budget, and existing operations to the new name
+  if(f.subcategories[oldName]){ f.subcategories[newName]=f.subcategories[oldName]; delete f.subcategories[oldName]; }
+  if(f.catBudgets[oldName]!=null){ f.catBudgets[newName]=f.catBudgets[oldName]; delete f.catBudgets[oldName]; }
+  f.operations.forEach(o=>{ if(o.category===oldName) o.category=newName; });
+  save(); renderFinCats(); renderFinance();
+  toast('Категория переименована');
+}
 function removeFinCategory(i){
-  const c = fin().categories[i];
-  if(!confirm(`Удалить категорию «${c}»? Операции с ней останутся, но без категории в списке.`)) return;
-  fin().categories.splice(i,1); save(); renderFinCats();
+  const f = fin();
+  const c = f.categories[i];
+  if(!confirm(`Удалить категорию «${c}»? Операции с ней останутся (с этим названием), но её не будет в списке.`)) return;
+  f.categories.splice(i,1);
+  delete f.subcategories[c]; delete f.catBudgets[c];
+  save(); renderFinCats(); renderFinance();
+}
+function setCatBudget(cat, val){
+  const b = parseFloat(val)||0;
+  if(b>0) fin().catBudgets[cat]=b; else delete fin().catBudgets[cat];
+  save(); renderFinance();
+}
+function addSubcat(cat, input){
+  const s = input.value.trim(); if(!s) return;
+  if(!fin().subcategories[cat]) fin().subcategories[cat]=[];
+  if(!fin().subcategories[cat].includes(s)) fin().subcategories[cat].push(s);
+  input.value=''; save(); renderFinCats();
+}
+function removeSubcat(cat, si){
+  if(!fin().subcategories[cat]) return;
+  fin().subcategories[cat].splice(si,1);
+  if(!fin().subcategories[cat].length) delete fin().subcategories[cat];
+  save(); renderFinCats();
 }
 
 /* ----- JSON import ----- */
@@ -2760,16 +2846,38 @@ function renderFinance(){
     return `<div class="fin-op" onclick="openOpModal('${o.type}','${o.id}')">
       <div class="fin-op-icon ${isExp?'exp':'inc'}">${isExp?'−':'+'}</div>
       <div class="fin-op-main">
-        <div class="fin-op-cat">${isExp?esc(o.category||'Другое'):'Доход'}${o.note?` · <span style="color:var(--text-faint)">${esc(o.note)}</span>`:''}</div>
+        <div class="fin-op-cat">${isExp?esc(o.category||'Другое'):'Доход'}${o.subcategory?` <span style="color:var(--text-faint)">› ${esc(o.subcategory)}</span>`:''}${o.note?` · <span style="color:var(--text-faint)">${esc(o.note)}</span>`:''}</div>
         <div class="fin-op-date">${dl}</div>
       </div>
       <div class="fin-op-amount ${isExp?'exp':'inc'}">${isExp?'−':'+'}${fmtMoney(o.amount).replace('−','')}</div>
     </div>`;
   }).join('') : `<div class="wf-none">За этот период операций нет.</div>`;
 
+  // per-category budgets (month-based), with % used and warnings
+  const monthExpenses = opsInMonth().filter(o=>o.type==='expense');
+  const catSpentMonth = {};
+  monthExpenses.forEach(o=>{ const c=o.category||'Другое'; catSpentMonth[c]=(catSpentMonth[c]||0)+o.amount; });
+  const catBudgetEntries = Object.entries(f.catBudgets||{}).filter(([c,b])=>b>0);
+  const catBudgetBlock = catBudgetEntries.length ? `
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <h3>Бюджеты по категориям (${monthName})</h3>
+      ${catBudgetEntries.map(([c,b])=>{
+        const sp = catSpentMonth[c]||0;
+        const pct = Math.min(100, Math.round(sp/b*100));
+        const over = sp>b;
+        const near = !over && sp/b>=0.8;
+        const col = over?'var(--rose)':near?'var(--amber)':'var(--teal)';
+        return `<div class="catbudget-row">
+          <div class="catbudget-head"><span>${esc(c)}</span><span style="color:${col}">${fmtMoney(sp)} / ${fmtMoney(b)}${over?' · превышен':near?' · почти':''}</span></div>
+          <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
+        </div>`;
+      }).join('')}
+    </div>` : '';
+
   box.innerHTML = `
     ${periodBar}
     ${budgetCard}
+    ${catBudgetBlock}
     ${metrics}
     ${catBlock}
     <div class="chart-wrap">
