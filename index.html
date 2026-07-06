@@ -382,6 +382,29 @@
   .coin-led .x:hover { color: var(--rose); }
   .coinrules-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
 
+  /* ---------- Achievements ---------- */
+  .ach-teaser { display: flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 20px; cursor: pointer; font-size: 13.5px; color: var(--text-dim); transition: .12s; }
+  .ach-teaser:hover { border-color: var(--amber-soft); }
+  .ach-teaser b { color: var(--amber); }
+  .ach-summary { font-size: 14px; color: var(--text-dim); margin-bottom: 16px; }
+  .ach-summary b { color: var(--amber); font-size: 17px; }
+  .ach-list { display: flex; flex-direction: column; gap: 10px; }
+  .ach-card { display: flex; align-items: center; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; transition: .12s; }
+  .ach-card.locked { opacity: .72; }
+  .ach-card.done { border-color: var(--amber-soft); }
+  .ach-card.claimed { border-color: var(--line); opacity: .85; }
+  .ach-icon { font-size: 26px; flex: none; width: 46px; height: 46px; display: flex; align-items: center; justify-content: center; background: var(--ink-soft); border-radius: 12px; }
+  .ach-card.done .ach-icon { background: rgba(246,179,75,.14); }
+  .ach-main { flex: 1; min-width: 0; }
+  .ach-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+  .ach-check { color: var(--teal); }
+  .ach-desc { font-size: 12.5px; color: var(--text-dim); margin: 3px 0 8px; }
+  .ach-bar { height: 6px; background: var(--ink-soft); border-radius: 99px; overflow: hidden; }
+  .ach-bar > i { display: block; height: 100%; background: var(--amber); border-radius: 99px; }
+  .ach-action { flex: none; }
+  .ach-prog-n { font-size: 12.5px; color: var(--text-faint); }
+  .ach-got { font-size: 12px; color: var(--teal); }
+
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
   .meal-tab { border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); border-radius: 99px; padding: 7px 18px; cursor: pointer; font-family: inherit; font-size: 13.5px; transition: .12s; }
@@ -875,6 +898,8 @@
     .fin-custom-range { flex-direction: column; }
     .coin-stats { grid-template-columns: repeat(2,1fr); }
     .coinrules-grid { grid-template-columns: 1fr; }
+    .ach-card { flex-wrap: wrap; }
+    .ach-action { width: 100%; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -1121,10 +1146,24 @@
           <p>Зарабатывай дисциплиной — трать на осознанные удовольствия</p>
         </div>
         <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="switchView('achievements')">🏅 Достижения</button>
         <button class="btn btn-ghost" onclick="openCoinRules()">⚙ Правила</button>
         <button class="btn btn-ghost" onclick="openCoinManual()">± Вручную</button>
       </div>
       <div id="coins-body"></div>
+    </section>
+
+    <!-- ACHIEVEMENTS -->
+    <section class="view" id="view-achievements">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Достижения</h2>
+          <p>Копи прогресс и забирай награды монетами</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="switchView('coins')">← К монетам</button>
+      </div>
+      <div id="achievements-body"></div>
     </section>
 
     <!-- MEALS / FOOD PLANNER -->
@@ -1806,6 +1845,7 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.coins.ledger)) data.coins.ledger = [];
       if (!data.coins.rules || typeof data.coins.rules !== 'object') data.coins.rules = {habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70};
       if (!Array.isArray(data.coins.rewards)) data.coins.rewards = [];
+      if (!data.coins.achievements || typeof data.coins.achievements !== 'object') data.coins.achievements = {};
       if (!data.meals || typeof data.meals !== 'object') data.meals = { plan:{}, library:[], goals:{calories:0,protein:0,fat:0,carbs:0,budget:0} };
       if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
       if (!Array.isArray(data.meals.library)) data.meals.library = [];
@@ -1853,7 +1893,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============ NAV ============ */
 function switchView(v) {
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
-  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v === 'journalStats' ? 'journal' : v;
+  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v === 'journalStats' ? 'journal' : v === 'achievements' ? 'coins' : v;
   document.querySelectorAll('nav.side button[data-view], .mobile-tabs button').forEach(b =>
     b.classList.toggle('active', b.dataset.view === navMatch));
   if (v === 'overview') renderOverview();
@@ -1868,6 +1908,7 @@ function switchView(v) {
   if (v === 'wins') renderWins();
   if (v === 'finance') renderFinance();
   if (v === 'coins') renderCoins();
+  if (v === 'achievements') renderAchievements();
   if (v === 'meals') { mealDate=null; renderMeals(); }
   if (v === 'calendar') { calMonth=null; selectedCalDay=todayKey(); renderCalendar(); }
   if (v === 'journalStats') renderJournalStats();
@@ -3279,6 +3320,9 @@ function renderCoins(){
   box.innerHTML = `
     ${hero}
     ${stats}
+    <div class="ach-teaser" onclick="switchView('achievements')">
+      🏅 Достижения: <b>${achievementsSummary().unlocked}</b> из ${achievementsSummary().total} открыто <span style="margin-left:auto;color:var(--amber)">открыть →</span>
+    </div>
     <div class="chart-wrap" style="margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 style="margin:0">Награды</h3>
@@ -3290,6 +3334,76 @@ function renderCoins(){
       <h3>История монет</h3>
       <div class="coin-led-list">${ledgerHtml}</div>
     </div>
+  `;
+}
+
+/* ============ ACHIEVEMENTS ============ */
+// Each achievement: id, icon, title, desc, goal, reward (coins), and cur(data) -> current progress number.
+const ACHIEVEMENTS = [
+  { id:'habit3', icon:'✦', title:'Первый разгон', desc:'3 дня подряд выполняй любую привычку', goal:3, reward:20,
+    cur:()=> data.habits.reduce((m,h)=>Math.max(m, bestStreak(h)),0) },
+  { id:'habit7', icon:'🔥', title:'Неделя силы', desc:'7 дней подряд выполняй привычку', goal:7, reward:50,
+    cur:()=> data.habits.reduce((m,h)=>Math.max(m, bestStreak(h)),0) },
+  { id:'wins10', icon:'🏆', title:'Победитель', desc:'10 побед над собой', goal:10, reward:50,
+    cur:()=> data.wins.length },
+  { id:'wins25', icon:'🛡', title:'Железная воля', desc:'25 побед над собой', goal:25, reward:120,
+    cur:()=> data.wins.length },
+  { id:'tasks30', icon:'▦', title:'Работяга', desc:'Выполни 30 задач', goal:30, reward:60,
+    cur:()=> data.tasks.filter(t=>t.col==='done').length },
+  { id:'proj1', icon:'🏁', title:'Финишер', desc:'Заверши 1 проект', goal:1, reward:40,
+    cur:()=> (data.projectArchive||[]).length },
+  { id:'fin7', icon:'₽', title:'Под контролем', desc:'Веди финансы 7 разных дней', goal:7, reward:40,
+    cur:()=> new Set(data.finance.operations.map(o=>o.date)).size },
+  { id:'day7', icon:'☺', title:'Осознанность', desc:'Оцени день 7 раз', goal:7, reward:40,
+    cur:()=> Object.values(data.days).filter(d=>d.score>0).length },
+  { id:'coins200', icon:'◆', title:'Копилка', desc:'Заработай 200 монет за всё время', goal:200, reward:50,
+    cur:()=> coins().ledger.filter(e=>e.amount>0).reduce((a,e)=>a+e.amount,0) },
+  { id:'meal7', icon:'🍽', title:'По плану', desc:'Запланируй питание в 7 разных дней', goal:7, reward:40,
+    cur:()=> Object.keys(data.meals.plan).filter(k=>MEAL_TYPES.some(m=>(data.meals.plan[k][m.id]||[]).length)).length },
+];
+function achState(a){
+  const cur = Math.max(0, a.cur());
+  const done = cur>=a.goal;
+  const claimed = !!(data.coins.achievements[a.id] && data.coins.achievements[a.id].claimed);
+  return { cur:Math.min(cur,a.goal), rawCur:cur, done, claimed, pct: Math.min(100, Math.round(cur/a.goal*100)) };
+}
+function claimAchievement(id){
+  const a = ACHIEVEMENTS.find(x=>x.id===id); if(!a) return;
+  const st = achState(a);
+  if(!st.done || st.claimed) return;
+  data.coins.achievements[id] = { claimed:true, at:Date.now() };
+  coinAdd(a.reward, 'Достижение: '+a.title, 'achievement:'+id);
+  save(); renderAchievements(); renderCoins(); renderOverview();
+  toast(`Достижение получено! +${a.reward} ◆`);
+}
+function achievementsSummary(){
+  let unlocked=0; ACHIEVEMENTS.forEach(a=>{ if(achState(a).done) unlocked++; });
+  return { unlocked, total: ACHIEVEMENTS.length };
+}
+function openAchievements(){ switchView('achievements'); }
+function renderAchievements(){
+  const box = document.getElementById('achievements-body');
+  if(!box) return;
+  const sum = achievementsSummary();
+  const rows = ACHIEVEMENTS.map(a=>{
+    const st = achState(a);
+    const cls = st.done ? (st.claimed?'done claimed':'done') : 'locked';
+    const action = st.done
+      ? (st.claimed ? `<span class="ach-got">получено</span>` : `<button class="btn btn-primary btn-sm" onclick="claimAchievement('${a.id}')">Забрать +${a.reward} ◆</button>`)
+      : `<span class="ach-prog-n">${st.rawCur} / ${a.goal}</span>`;
+    return `<div class="ach-card ${cls}">
+      <div class="ach-icon">${a.icon}</div>
+      <div class="ach-main">
+        <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''}</div>
+        <div class="ach-desc">${esc(a.desc)}</div>
+        <div class="ach-bar"><i style="width:${st.pct}%"></i></div>
+      </div>
+      <div class="ach-action">${action}</div>
+    </div>`;
+  }).join('');
+  box.innerHTML = `
+    <div class="ach-summary">Открыто достижений: <b>${sum.unlocked}</b> из ${sum.total}</div>
+    <div class="ach-list">${rows}</div>
   `;
 }
 
