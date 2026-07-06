@@ -342,6 +342,11 @@
   .subcat-add { font-size: 12px; padding: 5px 8px; width: 140px; }
   .catbudget-row { margin-bottom: 12px; }
   .catbudget-head { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-dim); margin-bottom: 5px; }
+  .fin-range-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .fin-range-head .fin-range-label { margin-bottom: 0; }
+  .finmetrics-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 14px; }
+  .finmetric-opt { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; cursor: pointer; }
+  .finmetric-opt input { width: auto; }
 
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
@@ -1357,6 +1362,18 @@
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="closeModal('fincat-modal')">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- Finance metrics config modal -->
+<div class="modal-bg" id="finmetrics-modal">
+  <div class="modal">
+    <h3 class="display">Показатели на экране</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Выбери, какие показатели отображать в блоке метрик.</p>
+    <div id="finmetrics-list" class="finmetrics-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('finmetrics-modal')">Готово</button>
     </div>
   </div>
 </div>
@@ -2696,6 +2713,31 @@ function setCatBudget(cat, val){
   if(b>0) fin().catBudgets[cat]=b; else delete fin().catBudgets[cat];
   save(); renderFinance();
 }
+
+// registry of metric labels (must match ALL_METRICS ids in renderFinance)
+const FIN_METRIC_LABELS = {
+  spent:'Потрачено за период', income:'Доходы за период', balance:'Баланс за период',
+  avgday:'Средний расход в день', topcat:'Крупнейшая категория',
+  forecast:'Прогноз до конца месяца', remain:'Остаток бюджета (месяц)',
+  monthspent:'Потрачено в этом месяце', monthbal:'Баланс месяца', opcount:'Операций за период'
+};
+const FIN_METRICS_DEFAULT = ['spent','income','balance','avgday','topcat'];
+function openFinMetrics(){ renderFinMetricsList(); document.getElementById('finmetrics-modal').classList.add('open'); }
+function renderFinMetricsList(){
+  const box = document.getElementById('finmetrics-list');
+  const enabled = (data.settings.finMetrics && data.settings.finMetrics.length) ? data.settings.finMetrics : FIN_METRICS_DEFAULT;
+  box.innerHTML = Object.keys(FIN_METRIC_LABELS).map(id=>`<label class="finmetric-opt">
+    <input type="checkbox" ${enabled.includes(id)?'checked':''} onchange="toggleFinMetric('${id}', this.checked)">
+    <span>${FIN_METRIC_LABELS[id]}</span>
+  </label>`).join('');
+}
+function toggleFinMetric(id, on){
+  let list = (data.settings.finMetrics && data.settings.finMetrics.length) ? data.settings.finMetrics.slice() : FIN_METRICS_DEFAULT.slice();
+  if(on){ if(!list.includes(id)) list.push(id); }
+  else { list = list.filter(x=>x!==id); if(!list.length) list=['spent']; } // keep at least one
+  data.settings.finMetrics = list;
+  save(); renderFinance();
+}
 function addSubcat(cat, input){
   const s = input.value.trim(); if(!s) return;
   if(!fin().subcategories[cat]) fin().subcategories[cat]=[];
@@ -2818,15 +2860,33 @@ function renderFinance(){
     : range.from===range.to ? `за ${new Date(range.from+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}`
     : `${new Date(range.from+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})} — ${new Date(range.to+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}`;
 
+  // configurable metric set — user picks which to show (settings.finMetrics)
+  const balance = earned - spent;
+  const monthBalance = opsInMonth().reduce((a,o)=>a+(o.type==='income'?o.amount:-o.amount),0);
+  const ALL_METRICS = {
+    spent:     { label:'потрачено', val:fmtMoney(spent), color:'var(--rose)' },
+    income:    { label:'доходы', val:fmtMoney(earned), color:'var(--teal)' },
+    balance:   { label:'баланс', val:fmtMoney(balance), color: balance>=0?'var(--teal)':'var(--rose)' },
+    avgday:    { label:'средний расход в день', val:fmtMoney(avgPerDay) },
+    topcat:    { label:'крупнейшая категория', val:esc(topCatName), small:true },
+    forecast:  { label:'прогноз до конца месяца', val:fmtMoney(monthForecast) },
+    remain:    { label:'остаток бюджета (месяц)', val: budget>0?fmtMoney(budget-monthSpent):'—' },
+    monthspent:{ label:'потрачено в этом месяце', val:fmtMoney(monthSpent), color:'var(--rose)' },
+    monthbal:  { label:'баланс месяца', val:fmtMoney(monthBalance), color: monthBalance>=0?'var(--teal)':'var(--rose)' },
+    opcount:   { label:'операций за период', val:String(ops.length) },
+  };
+  const defaultMetrics = ['spent','income','balance','avgday','topcat'];
+  const enabled = (data.settings.finMetrics && data.settings.finMetrics.length) ? data.settings.finMetrics : defaultMetrics;
+  const metricCards = enabled.filter(id=>ALL_METRICS[id]).map(id=>{
+    const m = ALL_METRICS[id];
+    return `<div class="fin-metric"><div class="fm-n" style="${m.color?`color:${m.color};`:''}${m.small?'font-size:16px;':''}">${m.val}</div><div class="fm-l">${m.label}</div></div>`;
+  }).join('');
   const metrics = `
-    <div class="fin-range-label">Показатели ${rangeLabel}</div>
-    <div class="fin-metrics">
-      <div class="fin-metric"><div class="fm-n" style="color:var(--rose)">${fmtMoney(spent)}</div><div class="fm-l">потрачено</div></div>
-      <div class="fin-metric"><div class="fm-n" style="color:var(--teal)">${fmtMoney(earned)}</div><div class="fm-l">доходы</div></div>
-      <div class="fin-metric"><div class="fm-n" style="color:${earned-spent>=0?'var(--teal)':'var(--rose)'}">${fmtMoney(earned-spent)}</div><div class="fm-l">баланс</div></div>
-      <div class="fin-metric"><div class="fm-n">${fmtMoney(avgPerDay)}</div><div class="fm-l">средний расход в день</div></div>
-      <div class="fin-metric"><div class="fm-n" style="font-size:16px">${esc(topCatName)}</div><div class="fm-l">крупнейшая категория</div></div>
-    </div>`;
+    <div class="fin-range-head">
+      <div class="fin-range-label">Показатели ${rangeLabel}</div>
+      <button class="icon-btn" title="Настроить показатели" onclick="openFinMetrics()">⚙</button>
+    </div>
+    <div class="fin-metrics">${metricCards}</div>`;
 
   const catBlock = topCats.length ? `
     <div class="chart-wrap" style="margin-bottom:20px">
