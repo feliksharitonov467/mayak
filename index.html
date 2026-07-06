@@ -451,6 +451,28 @@
 
   /* ---------- Calendar ---------- */
   .cal-nav { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .cal-modes { display: flex; gap: 8px; margin-bottom: 14px; }
+  .cal-mode { border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); border-radius: 99px; padding: 6px 16px; font-size: 13px; cursor: pointer; font-family: inherit; transition: .12s; }
+  .cal-mode.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); font-weight: 600; }
+  .cal-week { display: flex; flex-direction: column; gap: 8px; }
+  .cw-row { display: flex; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .cw-row.today { border-color: var(--amber); }
+  .cw-day { flex: none; width: 110px; cursor: pointer; }
+  .cw-dow { font-size: 13px; font-weight: 600; }
+  .cw-date { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
+  .cw-add { margin-top: 6px; width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); background: var(--ink-soft); color: var(--text-dim); cursor: pointer; font-size: 15px; }
+  .cw-add:hover { border-color: var(--amber-soft); color: var(--amber); }
+  .cw-events { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; justify-content: center; }
+  .cw-ev { font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
+  .cw-ev .done { text-decoration: line-through; color: var(--text-faint); }
+  .cw-empty { color: var(--text-faint); font-size: 13px; }
+  .cal-day-view { }
+  .cd-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .cd-group { margin-bottom: 16px; }
+  .cd-group-h { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-faint); margin-bottom: 8px; }
+  .cd-ev { display: flex; align-items: center; gap: 11px; padding: 10px 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; margin-bottom: 6px; font-size: 14px; }
+  .cd-ev-icon { flex: none; width: 20px; text-align: center; }
+  .cd-ev .done { text-decoration: line-through; color: var(--text-faint); }
   .cal-month { font-size: 16px; font-weight: 600; text-transform: capitalize; min-width: 160px; text-align: center; }
   .cal-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
   .cal-leg { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-faint); }
@@ -708,6 +730,7 @@
   .sphere-progress { margin-top: 12px; }
   .sphere-progress .sp-lbl { font-size: 11.5px; color: var(--text-dim); margin-bottom: 5px; display: flex; justify-content: space-between; }
   .sphere-foot { display: flex; gap: 6px; margin-top: 12px; }
+  .sphere-create { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
   .fld-lbl { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 8px; }
   .sph-goals-edit { margin-bottom: 14px; }
   #sph-goals .sgd { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13.5px; }
@@ -894,6 +917,9 @@
     .cal-cell { min-height: 46px; padding: 4px 3px; gap: 3px; }
     .cal-num { font-size: 11px; }
     .cal-grid { gap: 3px; }
+    .cw-row { flex-direction: column; gap: 8px; }
+    .cw-day { width: auto; display: flex; align-items: center; gap: 10px; }
+    .cw-add { margin-top: 0; }
     .cal-legend { gap: 8px; }
     .fin-custom-range { flex-direction: column; }
     .coin-stats { grid-template-columns: repeat(2,1fr); }
@@ -1011,10 +1037,15 @@
         <div class="spacer"></div>
         <button class="btn btn-primary" onclick="openEventModal()">+ Событие</button>
       </div>
+      <div class="cal-modes">
+        <button id="calmode-day" class="cal-mode" onclick="setCalMode('day')">День</button>
+        <button id="calmode-week" class="cal-mode" onclick="setCalMode('week')">Неделя</button>
+        <button id="calmode-month" class="cal-mode on" onclick="setCalMode('month')">Месяц</button>
+      </div>
       <div class="cal-nav">
-        <button class="icon-btn" onclick="calMonthShift(-1)">‹</button>
+        <button class="icon-btn" onclick="calShift(-1)">‹</button>
         <span class="cal-month" id="cal-month"></span>
-        <button class="icon-btn" onclick="calMonthShift(1)">›</button>
+        <button class="icon-btn" onclick="calShift(1)">›</button>
         <button class="btn btn-ghost btn-sm" onclick="calToday()">сегодня</button>
       </div>
       <div class="cal-legend" id="cal-legend"></div>
@@ -1910,7 +1941,7 @@ function switchView(v) {
   if (v === 'coins') renderCoins();
   if (v === 'achievements') renderAchievements();
   if (v === 'meals') { mealDate=null; renderMeals(); }
-  if (v === 'calendar') { calMonth=null; selectedCalDay=todayKey(); renderCalendar(); }
+  if (v === 'calendar') { calAnchor=null; selectedCalDay=todayKey(); renderCalendar(); }
   if (v === 'journalStats') renderJournalStats();
   if (v === 'settings') renderSettings();
   window.scrollTo(0,0);
@@ -3782,36 +3813,46 @@ function confirmMealImport(){
 }
 
 /* ============ CALENDAR ============ */
-let calMonth = null; // {y, m}; null = current
-function calCurrent(){ if(calMonth) return calMonth; const n=new Date(); return {y:+todayKey().slice(0,4), m:+todayKey().slice(5,7)-1}; }
-function calMonthShift(delta){
-  const c = calCurrent();
-  let m=c.m+delta, y=c.y;
-  if(m<0){m=11;y--;} if(m>11){m=0;y++;}
-  calMonth={y,m}; selectedCalDay=null; renderCalendar();
+let calMode = 'month';          // day | week | month
+let calAnchor = null;           // anchor date key; null = today
+function calAnchorKey(){ return calAnchor || todayKey(); }
+function setCalMode(m){
+  calMode = m;
+  ['day','week','month'].forEach(x=>document.getElementById('calmode-'+x).classList.toggle('on', x===m));
+  renderCalendar();
 }
-function calToday(){ calMonth=null; selectedCalDay=todayKey(); renderCalendar(); }
+function calShift(delta){
+  const a = calAnchorKey();
+  if(calMode==='day') calAnchor = addDaysKey(a, delta);
+  else if(calMode==='week') calAnchor = addDaysKey(a, delta*7);
+  else { // month
+    const [y,m,d] = a.split('-').map(Number);
+    let nm = m-1+delta, ny=y;
+    while(nm<0){nm+=12;ny--;} while(nm>11){nm-=12;ny++;}
+    const day = Math.min(d, new Date(ny, nm+1, 0).getDate());
+    calAnchor = `${ny}-${String(nm+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+  }
+  selectedCalDay = null;
+  renderCalendar();
+}
+function calToday(){ calAnchor=null; selectedCalDay=todayKey(); renderCalendar(); }
 
 // Gather all events for a given date key from every section
-function eventsForDate(key){
+function eventsForDate(key, includeHabits){
   const out = [];
-  // tasks with a deadline (not archived/done-old)
   data.tasks.forEach(t=>{ if(t.due===key && !t.inbox){ out.push({type:'task', color:'var(--rose)', icon:'✓', text:t.txt, done:t.col==='done'}); } });
-  // project deadlines
   data.projects.forEach(p=>{ if(p.due===key){ out.push({type:'project', color:'var(--amber)', icon:'▤', text:'Проект: '+p.name+' ('+projectPct(p)+'%)'}); } });
-  // wheel deadline
   if(data.wheel && data.wheel.deadline===key){ out.push({type:'wheel', color:'var(--violet)', icon:'◍', text:'Колесо жизни — срок'}); }
-  // day rating
   if(data.days[key] && data.days[key].score>0){ out.push({type:'day', color:'var(--teal)', icon:'☺', text:'Оценка дня: '+data.days[key].score+'/10'}); }
-  // wins
   data.wins.forEach(w=>{ if(w.date===key){ out.push({type:'win', color:'var(--teal)', icon:'🏆', text:'Победа: '+w.weakness}); } });
-  // meals planned
   const mp = data.meals.plan[key];
   if(mp){ const cnt = MEAL_TYPES.reduce((a,m)=>a+((mp[m.id]||[]).length),0); if(cnt) out.push({type:'meal', color:'var(--amber-soft)', icon:'🍽', text:cnt+' '+plural(cnt,'блюдо','блюда','блюд')+' в плане'}); }
-  // finance operations
   data.finance.operations.forEach(o=>{ if(o.date===key){ out.push({type:'fin', color:o.type==='expense'?'var(--rose)':'var(--teal)', icon:'₽', text:(o.type==='expense'?'−':'+')+Math.round(o.amount)+'₽ '+(o.category||'доход')}); } });
-  // custom events
   data.events.forEach(e=>{ if(e.date===key){ out.push({type:'event', color:'var(--amber)', icon:'★', text:e.name, eventId:e.id}); } });
+  // habits done that day (only shown in day/week detail, not as month dots)
+  if(includeHabits){
+    data.habits.forEach(h=>{ if(h.log[key]){ out.push({type:'habit', color:'var(--amber-soft)', icon:'✦', text:'Привычка: '+h.name}); } });
+  }
   return out;
 }
 
@@ -3819,55 +3860,124 @@ let selectedCalDay = null;
 function renderCalendar(){
   const body = document.getElementById('calendar-body');
   if(!body) return;
-  const c = calCurrent();
-  const monthName = new Date(c.y, c.m, 1).toLocaleDateString('ru-RU',{month:'long', year:'numeric'});
-  document.getElementById('cal-month').textContent = monthName;
+  document.getElementById('cal-legend').style.display = calMode==='month' ? '' : 'none';
+  if(calMode==='month') return renderCalMonth(body);
+  if(calMode==='week') return renderCalWeek(body);
+  return renderCalDay(body);
+}
 
-  // legend
+function renderCalMonth(body){
+  const a = calAnchorKey();
+  const [cy, cm] = [ +a.slice(0,4), +a.slice(5,7)-1 ];
+  document.getElementById('cal-month').textContent = new Date(cy, cm, 1).toLocaleDateString('ru-RU',{month:'long', year:'numeric'});
   document.getElementById('cal-legend').innerHTML = [
     ['var(--rose)','задачи'],['var(--amber)','проекты/события'],['var(--teal)','дни/победы'],['var(--violet)','колесо'],['var(--amber-soft)','питание']
   ].map(([col,lbl])=>`<span class="cal-leg"><span class="cal-dot" style="background:${col}"></span>${lbl}</span>`).join('');
 
-  const first = new Date(c.y, c.m, 1);
+  const first = new Date(cy, cm, 1);
   const startOffset = (first.getDay()+6)%7;
-  const daysInMonth = new Date(c.y, c.m+1, 0).getDate();
+  const daysInMonth = new Date(cy, cm+1, 0).getDate();
   const tk = todayKey();
   const WDH = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
-
   let cells = WDH.map(w=>`<div class="cal-wd">${w}</div>`).join('');
   for(let i=0;i<startOffset;i++) cells += `<div class="cal-cell empty"></div>`;
   for(let d=1; d<=daysInMonth; d++){
-    const key = `${c.y}-${String(c.m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const key = `${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const evs = eventsForDate(key);
-    const isToday = key===tk;
-    const isSel = key===selectedCalDay;
-    // up to 3 dots by unique color
+    const isToday = key===tk, isSel = key===selectedCalDay;
     const colors = [...new Set(evs.map(e=>e.color))].slice(0,4);
     const dots = colors.map(col=>`<span class="cal-cd" style="background:${col}"></span>`).join('');
     cells += `<div class="cal-cell ${isToday?'today':''} ${isSel?'sel':''} ${evs.length?'has':''}" onclick="selectCalDay('${key}')">
-      <span class="cal-num">${d}</span>
-      <div class="cal-dots">${dots}</div>
+      <span class="cal-num">${d}</span><div class="cal-dots">${dots}</div>
     </div>`;
   }
   body.innerHTML = `<div class="cal-grid">${cells}</div>`;
-
   renderCalDayDetail();
 }
-function selectCalDay(key){ selectedCalDay = (selectedCalDay===key)?null:key; renderCalendar(); }
+
+function renderCalWeek(body){
+  const a = calAnchorKey();
+  const monday = weekStartKey(a);
+  const weekKeys = Array.from({length:7},(_,i)=>addDaysKey(monday,i));
+  document.getElementById('cal-month').textContent =
+    `${new Date(monday+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})} — ${new Date(weekKeys[6]+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}`;
+  const tk = todayKey();
+  const WDL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
+  const rows = weekKeys.map((k,i)=>{
+    const evs = eventsForDate(k, true);
+    const d = new Date(k+'T00:00');
+    const evHtml = evs.length ? evs.map(e=>`<div class="cw-ev" ${e.eventId?`onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`:''}>
+        <span style="color:${e.color}">${e.icon}</span><span class="${e.done?'done':''}">${esc(e.text)}</span></div>`).join('')
+      : `<div class="cw-empty">—</div>`;
+    return `<div class="cw-row ${k===tk?'today':''}">
+      <div class="cw-day" onclick="calOpenDay('${k}')">
+        <div class="cw-dow">${WDL[i]}</div>
+        <div class="cw-date">${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}</div>
+        <button class="cw-add" onclick="event.stopPropagation();openEventModal(null,'${k}')">+</button>
+      </div>
+      <div class="cw-events">${evHtml}</div>
+    </div>`;
+  }).join('');
+  body.innerHTML = `<div class="cal-week">${rows}</div>`;
+  document.getElementById('cal-day-detail').innerHTML='';
+}
+
+function renderCalDay(body){
+  const key = calAnchorKey();
+  const d = new Date(key+'T00:00');
+  document.getElementById('cal-month').textContent = d.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+  const evs = eventsForDate(key, true);
+  // group by type for a structured day view
+  const groups = [
+    ['task','Задачи и дедлайны'],['project','Проекты'],['event','События'],
+    ['day','Оценка дня'],['win','Победы'],['habit','Привычки'],['meal','Питание'],['fin','Финансы'],['wheel','Колесо']
+  ];
+  let html = '';
+  groups.forEach(([type,label])=>{
+    const items = evs.filter(e=>e.type===type);
+    if(!items.length) return;
+    html += `<div class="cd-group"><div class="cd-group-h">${label}</div>${items.map(e=>`<div class="cd-ev" ${e.eventId?`onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`:''}>
+      <span class="cd-ev-icon" style="color:${e.color}">${e.icon}</span><span class="${e.done?'done':''}">${esc(e.text)}</span></div>`).join('')}</div>`;
+  });
+  if(!html) html = `<div class="wf-none">На этот день ничего не запланировано.</div>`;
+  body.innerHTML = `<div class="cal-day-view">
+    <div class="cd-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openEventModal(null,'${key}')">+ событие</button>
+      <button class="btn btn-ghost btn-sm" onclick="calAddTaskForDay('${key}')">+ задача с дедлайном</button>
+    </div>
+    ${html}
+  </div>`;
+  document.getElementById('cal-day-detail').innerHTML='';
+}
+// open a specific day in day-mode
+function calOpenDay(key){ calAnchor=key; setCalMode('day'); }
+// quick-create a task with a preset due date from the calendar
+function calAddTaskForDay(key){
+  const txt = prompt('Текст задачи с дедлайном на ' + new Date(key+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'}) + ':');
+  if(txt && txt.trim()){
+    data.tasks.push({ id: uid(), txt: txt.trim(), col:'todo', due:key, created: Date.now() });
+    save(); renderTasks(); renderCalendar();
+    toast('Задача добавлена');
+  }
+}
+function selectCalDay(key){ selectedCalDay = (selectedCalDay===key)?null:key; renderCalMonth(document.getElementById('calendar-body')); }
 function renderCalDayDetail(){
   const box = document.getElementById('cal-day-detail');
   if(!box) return;
-  if(!selectedCalDay){ box.innerHTML=''; return; }
-  const evs = eventsForDate(selectedCalDay);
+  if(!selectedCalDay || calMode!=='month'){ box.innerHTML=''; return; }
+  const evs = eventsForDate(selectedCalDay, true);
   const dl = new Date(selectedCalDay+'T00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
   const list = evs.length ? evs.map(e=>`<div class="cal-ev" ${e.eventId?`onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`:''}>
       <span class="cal-ev-icon" style="color:${e.color}">${e.icon}</span>
       <span class="cal-ev-text ${e.done?'done':''}">${esc(e.text)}</span>
     </div>`).join('') : `<div class="wf-none">На этот день ничего не запланировано.</div>`;
   box.innerHTML = `<div class="chart-wrap" style="margin-top:18px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
       <h3 style="margin:0;text-transform:capitalize">${dl}</h3>
-      <button class="btn btn-ghost btn-sm" onclick="openEventModal(null,'${selectedCalDay}')">+ событие на день</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="calOpenDay('${selectedCalDay}')">открыть день</button>
+        <button class="btn btn-ghost btn-sm" onclick="openEventModal(null,'${selectedCalDay}')">+ событие</button>
+      </div>
     </div>
     <div class="cal-ev-list">${list}</div>
   </div>`;
@@ -4151,6 +4261,24 @@ function addInbox(input){
   data.tasks.push({ id: uid(), txt, col:'todo', inbox:true, created: Date.now() });
   save(); renderTasks();
 }
+// create an inbox task already linked to a wheel sphere
+function addInboxForSphere(sphereId){
+  const txt = prompt('Входящая задача в эту сферу:');
+  if(txt && txt.trim()){
+    data.tasks.push({ id: uid(), txt: txt.trim(), col:'todo', inbox:true, sphereId, created: Date.now() });
+    save(); renderTasks(); renderWheelFolder(); renderWheel();
+    toast('Добавлено во входящие');
+  }
+}
+// create an active task (todo) linked to a wheel sphere
+function addTaskForSphere(sphereId){
+  const txt = prompt('Задача в эту сферу:');
+  if(txt && txt.trim()){
+    data.tasks.push({ id: uid(), txt: txt.trim(), col:'todo', sphereId, created: Date.now() });
+    save(); renderTasks(); renderWheelFolder(); renderWheel();
+    toast('Задача добавлена');
+  }
+}
 function delTask(id){ data.tasks=data.tasks.filter(t=>t.id!==id); save(); renderTasks(); renderLogbook(); }
 function moveTask(id, col){ const t=data.tasks.find(x=>x.id===id); if(t&&t.col!==col){ t.col=col; if(col==='done') t.doneAt=Date.now(); else delete t.doneAt; save(); renderTasks(); renderLogbook(); } }
 // step a task one column left/right (mobile-friendly, no dragging needed)
@@ -4326,8 +4454,11 @@ function renderWheelFolder(){
       </div>
       ${projHtml}${tasksHtml}${empty}
       <div class="wf-add">
-        <input type="text" placeholder="+ задача в эту сферу" onkeydown="if(event.key==='Enter'){addTask('todo',this,'${s.id}'); this.value='';}">
-        ${!proj ? `<button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ цель-проект</button>` : ''}
+        <input type="text" placeholder="+ задача в эту сферу (Enter)" onkeydown="if(event.key==='Enter'){addTask('todo',this,'${s.id}'); this.value='';}">
+      </div>
+      <div class="wf-actions">
+        <button class="btn btn-ghost btn-sm" onclick="addInboxForSphere('${s.id}')">+ входящая</button>
+        ${!proj ? `<button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ проект-цель</button>` : `<button class="btn btn-ghost btn-sm" onclick="switchView('projects')">открыть проект →</button>`}
       </div>
     </div>`;
   }).join('');
@@ -4593,6 +4724,11 @@ function renderWheel(){
         <div class="sp-lbl"><span>прогресс целей</span><span>${prog.done}/${prog.total}</span></div>
         <div class="bar teal"><i style="width:${prog.pct}%"></i></div>
       </div>`:''}
+      <div class="sphere-create">
+        ${!linkedProj ? `<button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ проект</button>` : `<button class="btn btn-ghost btn-sm" onclick="switchView('projects')">проект →</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="addTaskForSphere('${s.id}')">+ задача</button>
+        <button class="btn btn-ghost btn-sm" onclick="addInboxForSphere('${s.id}')">+ входящая</button>
+      </div>
       <div class="sphere-foot">
         <button class="btn btn-ghost btn-sm" onclick="openSphere('${s.id}')">Изменить</button>
         <button class="btn btn-ghost btn-sm" onclick="deleteSphere('${s.id}')">Удалить</button>
