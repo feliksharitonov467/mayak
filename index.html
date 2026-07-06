@@ -348,6 +348,40 @@
   .finmetric-opt { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; cursor: pointer; }
   .finmetric-opt input { width: auto; }
 
+  /* ---------- Coins / Gamification ---------- */
+  .coin-hero { background: linear-gradient(135deg, rgba(246,179,75,.14), rgba(246,179,75,.03)); border: 1px solid var(--amber-soft); border-radius: var(--radius); padding: 22px; margin-bottom: 16px; text-align: center; }
+  .coin-hero.neg { background: linear-gradient(135deg, rgba(240,120,138,.14), rgba(240,120,138,.03)); border-color: var(--rose); }
+  .coin-bal { font-family: Georgia, serif; font-size: 46px; line-height: 1; color: var(--amber); }
+  .coin-hero.neg .coin-bal { color: var(--rose); }
+  .coin-bal-l { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+  .coin-warn { font-size: 12.5px; color: var(--rose); margin-top: 12px; max-width: 420px; margin-left: auto; margin-right: auto; }
+  .coin-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
+  .coin-stat { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 8px; text-align: center; }
+  .coin-stat .cs-n { font-size: 15px; font-weight: 600; }
+  .coin-stat .cs-l { font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+  .reward-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px,1fr)); gap: 12px; }
+  .reward-card { background: var(--ink-soft); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; }
+  .reward-main { flex: 1; margin-bottom: 12px; }
+  .reward-name { font-size: 15px; font-weight: 600; }
+  .reward-cat { font-size: 11px; color: var(--violet); text-transform: uppercase; letter-spacing: .5px; margin-top: 3px; }
+  .reward-desc { font-size: 12.5px; color: var(--text-dim); margin-top: 6px; }
+  .reward-foot { display: flex; align-items: center; gap: 8px; }
+  .reward-cost { font-family: Georgia, serif; font-size: 17px; color: var(--amber); flex: 1; }
+  .coin-led-list { display: flex; flex-direction: column; gap: 6px; max-height: 420px; overflow-y: auto; }
+  .coin-led { display: flex; align-items: center; gap: 11px; padding: 10px 12px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
+  .coin-led-icon { width: 26px; height: 26px; flex: none; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; }
+  .coin-led-icon.pos { background: rgba(246,179,75,.16); color: var(--amber); }
+  .coin-led-icon.neg { background: rgba(240,120,138,.16); color: var(--rose); }
+  .coin-led-main { flex: 1; min-width: 0; }
+  .coin-led-reason { font-size: 13.5px; }
+  .coin-led-date { font-size: 11px; color: var(--text-faint); margin-top: 1px; }
+  .coin-led-amt { font-family: Georgia, serif; font-size: 16px; flex: none; }
+  .coin-led-amt.pos { color: var(--amber); }
+  .coin-led-amt.neg { color: var(--rose); }
+  .coin-led .x { color: var(--text-faint); cursor: pointer; flex: none; font-size: 12px; }
+  .coin-led .x:hover { color: var(--rose); }
+  .coinrules-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
+
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
   .meal-tab { border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); border-radius: 99px; padding: 7px 18px; cursor: pointer; font-family: inherit; font-size: 13.5px; transition: .12s; }
@@ -839,6 +873,8 @@
     .cal-grid { gap: 3px; }
     .cal-legend { gap: 8px; }
     .fin-custom-range { flex-direction: column; }
+    .coin-stats { grid-template-columns: repeat(2,1fr); }
+    .coinrules-grid { grid-template-columns: 1fr; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -917,6 +953,7 @@
     <button data-view="journal"><span class="ic">☺</span> Дневник</button>
     <button data-view="wins"><span class="ic">🏆</span> Победы</button>
     <button data-view="finance"><span class="ic">₽</span> Финансы</button>
+    <button data-view="coins"><span class="ic">◆</span> Монеты</button>
     <button data-view="meals"><span class="ic">🍽</span> Питание</button>
     <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
     <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
@@ -1076,6 +1113,20 @@
       <div id="finance-body"></div>
     </section>
 
+    <!-- COINS / GAMIFICATION -->
+    <section class="view" id="view-coins">
+      <div class="page-head">
+        <div class="titles">
+          <h2 class="display">Монеты силы воли</h2>
+          <p>Зарабатывай дисциплиной — трать на осознанные удовольствия</p>
+        </div>
+        <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="openCoinRules()">⚙ Правила</button>
+        <button class="btn btn-ghost" onclick="openCoinManual()">± Вручную</button>
+      </div>
+      <div id="coins-body"></div>
+    </section>
+
     <!-- MEALS / FOOD PLANNER -->
     <section class="view" id="view-meals">
       <div class="page-head">
@@ -1230,6 +1281,7 @@
   <button data-view="journal"><span class="ic">☺</span> Дневник</button>
   <button data-view="wins"><span class="ic">🏆</span> Победы</button>
   <button data-view="finance"><span class="ic">₽</span> Финансы</button>
+  <button data-view="coins"><span class="ic">◆</span> Монеты</button>
   <button data-view="meals"><span class="ic">🍽</span> Питание</button>
   <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
   <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
@@ -1374,6 +1426,58 @@
     <div id="finmetrics-list" class="finmetrics-list"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="closeModal('finmetrics-modal')">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coin manual entry modal -->
+<div class="modal-bg" id="coinmanual-modal">
+  <div class="modal">
+    <h3 class="display">Начисление / списание</h3>
+    <div class="op-type-toggle">
+      <button id="coin-dir-plus" class="op-type on" onclick="setCoinDir('plus')">+ Начислить</button>
+      <button id="coin-dir-minus" class="op-type" onclick="setCoinDir('minus')">− Списать</button>
+    </div>
+    <label class="fld"><span>Сколько монет</span><input type="number" id="coin-amount" inputmode="numeric" placeholder="0"></label>
+    <label class="fld"><span>За что</span><input type="text" id="coin-reason" placeholder="Напр. хорошо поработал"></label>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('coinmanual-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCoinManual()">Записать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Coin rules modal -->
+<div class="modal-bg" id="coinrules-modal">
+  <div class="modal">
+    <h3 class="display">Правила начисления</h3>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:14px">Сколько монет давать за автоматические действия. 0 — не начислять.</p>
+    <div class="coinrules-grid">
+      <label class="fld"><span>Привычка за день</span><input type="number" id="rule-habit"></label>
+      <label class="fld"><span>Победа над собой</span><input type="number" id="rule-win"></label>
+      <label class="fld"><span>Выполнена задача</span><input type="number" id="rule-task"></label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('coinrules-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="saveCoinRules()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reward create/edit modal -->
+<div class="modal-bg" id="reward-modal">
+  <div class="modal">
+    <h3 class="display" id="reward-title">Новая награда</h3>
+    <label class="fld"><span>Название</span><input type="text" id="reward-name" placeholder="Напр. сладкое, вечер сериалов"></label>
+    <label class="fld"><span>Стоимость в монетах</span><input type="number" id="reward-cost" inputmode="numeric" placeholder="0"></label>
+    <label class="fld"><span>Категория (необязательно)</span><input type="text" id="reward-cat" placeholder="Напр. еда, отдых, покупки"></label>
+    <label class="fld"><span>Описание (необязательно)</span><input type="text" id="reward-desc" placeholder="Детали"></label>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-ghost btn-sm" id="reward-delete" onclick="deleteRewardFromModal()" style="display:none">Удалить</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn btn-ghost" onclick="closeModal('reward-modal')">Отмена</button>
+        <button class="btn btn-primary" onclick="saveReward()">Сохранить</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1600,7 +1704,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1629,7 +1733,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1698,6 +1802,10 @@ window.onAuthChange = async function(user) {
       if (typeof data.finance.budget !== 'number') data.finance.budget = 0;
       if (!data.finance.subcategories || typeof data.finance.subcategories !== 'object') data.finance.subcategories = {};
       if (!data.finance.catBudgets || typeof data.finance.catBudgets !== 'object') data.finance.catBudgets = {};
+      if (!data.coins || typeof data.coins !== 'object') data.coins = { ledger:[], rules:{habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70}, rewards:[] };
+      if (!Array.isArray(data.coins.ledger)) data.coins.ledger = [];
+      if (!data.coins.rules || typeof data.coins.rules !== 'object') data.coins.rules = {habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70};
+      if (!Array.isArray(data.coins.rewards)) data.coins.rewards = [];
       if (!data.meals || typeof data.meals !== 'object') data.meals = { plan:{}, library:[], goals:{calories:0,protein:0,fat:0,carbs:0,budget:0} };
       if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
       if (!Array.isArray(data.meals.library)) data.meals.library = [];
@@ -1759,6 +1867,7 @@ function switchView(v) {
   if (v === 'journal') { journalDate=null; renderJournal(); }
   if (v === 'wins') renderWins();
   if (v === 'finance') renderFinance();
+  if (v === 'coins') renderCoins();
   if (v === 'meals') { mealDate=null; renderMeals(); }
   if (v === 'calendar') { calMonth=null; selectedCalDay=todayKey(); renderCalendar(); }
   if (v === 'journalStats') renderJournalStats();
@@ -2407,6 +2516,7 @@ function saveWin(){
   const comment = document.getElementById('win-comment').value.trim();
   data.wins.push({ id: uid(), date, weakness: winWeaknessDraft, comment, created: Date.now() });
   save(); closeModal('win-modal'); renderWins();
+  coinsOnWin();
   toast('Победа записана 🏆');
 }
 function deleteWin(id){
@@ -2949,6 +3059,236 @@ function renderFinance(){
         </div>
       </div>
       <div class="fin-op-list">${historyHtml}</div>
+    </div>
+  `;
+}
+
+/* ============ COINS / GAMIFICATION ============ */
+function coins(){ return data.coins; }
+function coinBalance(){ return coins().ledger.reduce((a,e)=>a+e.amount,0); }
+// add a ledger entry (amount can be + or -). source dedups auto-grants.
+function coinAdd(amount, reason, source){
+  coins().ledger.push({ id: uid(), amount, reason, source: source||'manual', date: todayKey(), created: Date.now() });
+}
+// award once per (source+key+day) — prevents double-granting for the same action
+function coinGrantOnce(sourceKey, amount, reason){
+  if(amount<=0) return false;
+  const today = todayKey();
+  const exists = coins().ledger.some(e=>e.source===sourceKey && e.date===today);
+  if(exists) return false;
+  coinAdd(amount, reason, sourceKey);
+  return true;
+}
+function coinRemoveBySource(sourceKey){
+  // remove today's auto-grant if the action was undone (e.g. unchecking a habit)
+  const today = todayKey();
+  const before = coins().ledger.length;
+  coins().ledger = coins().ledger.filter(e=>!(e.source===sourceKey && e.date===today));
+  return coins().ledger.length < before;
+}
+
+// ---- hooks called from other sections ----
+function coinsOnHabitToggle(habitId, nowOn){
+  const r = coins().rules.habit||0;
+  const src = 'habit:'+habitId;
+  if(nowOn){ if(coinGrantOnce(src, r, '+'+r+' за привычку')) { save(); } }
+  else { if(coinRemoveBySource(src)) save(); }
+  refreshCoinsUI();
+}
+function coinsOnWin(){
+  const r = coins().rules.win||0;
+  if(r>0){ coinAdd(r, '+'+r+' за победу над собой', 'win:'+Date.now()); save(); refreshCoinsUI(); }
+}
+function coinsOnTaskDone(taskId){
+  const r = coins().rules.task||0;
+  const src='task:'+taskId;
+  if(r>0 && coinGrantOnce(src, r, '+'+r+' за задачу')){ save(); refreshCoinsUI(); }
+}
+function refreshCoinsUI(){
+  const v = document.getElementById('view-coins');
+  if(v && v.classList.contains('active')) renderCoins();
+  renderOverview();
+}
+
+// ---- manual entry ----
+let coinDir = 'plus';
+function setCoinDir(d){ coinDir=d;
+  document.getElementById('coin-dir-plus').classList.toggle('on', d==='plus');
+  document.getElementById('coin-dir-minus').classList.toggle('on', d==='minus');
+}
+function openCoinManual(){
+  setCoinDir('plus');
+  document.getElementById('coin-amount').value='';
+  document.getElementById('coin-reason').value='';
+  document.getElementById('coinmanual-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('coin-amount').focus(),50);
+}
+function saveCoinManual(){
+  const amt = Math.abs(parseInt(document.getElementById('coin-amount').value,10)||0);
+  if(!amt){ toast('Впиши количество'); return; }
+  const reason = document.getElementById('coin-reason').value.trim() || (coinDir==='plus'?'ручное начисление':'ручное списание');
+  coinAdd(coinDir==='plus'?amt:-amt, reason, 'manual');
+  save(); closeModal('coinmanual-modal'); renderCoins(); renderOverview();
+  toast(coinDir==='plus'?'Начислено':'Списано');
+}
+function deleteLedgerEntry(id){
+  coins().ledger = coins().ledger.filter(e=>e.id!==id);
+  save(); renderCoins(); renderOverview();
+}
+
+// ---- rules ----
+function openCoinRules(){
+  document.getElementById('rule-habit').value = coins().rules.habit||0;
+  document.getElementById('rule-win').value = coins().rules.win||0;
+  document.getElementById('rule-task').value = coins().rules.task||0;
+  document.getElementById('coinrules-modal').classList.add('open');
+}
+function saveCoinRules(){
+  coins().rules.habit = Math.max(0, parseInt(document.getElementById('rule-habit').value,10)||0);
+  coins().rules.win = Math.max(0, parseInt(document.getElementById('rule-win').value,10)||0);
+  coins().rules.task = Math.max(0, parseInt(document.getElementById('rule-task').value,10)||0);
+  save(); closeModal('coinrules-modal'); renderCoins();
+  toast('Правила сохранены');
+}
+
+// ---- rewards (shop) ----
+let editingRewardId = null;
+function openRewardModal(id){
+  editingRewardId = id||null;
+  if(id){
+    const r = coins().rewards.find(x=>x.id===id);
+    document.getElementById('reward-title').textContent='Изменить награду';
+    document.getElementById('reward-name').value=r.name;
+    document.getElementById('reward-cost').value=r.cost;
+    document.getElementById('reward-cat').value=r.category||'';
+    document.getElementById('reward-desc').value=r.desc||'';
+    document.getElementById('reward-delete').style.display='';
+  } else {
+    document.getElementById('reward-title').textContent='Новая награда';
+    document.getElementById('reward-name').value='';
+    document.getElementById('reward-cost').value='';
+    document.getElementById('reward-cat').value='';
+    document.getElementById('reward-desc').value='';
+    document.getElementById('reward-delete').style.display='none';
+  }
+  document.getElementById('reward-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('reward-name').focus(),50);
+}
+function saveReward(){
+  const name=document.getElementById('reward-name').value.trim();
+  const cost=Math.abs(parseInt(document.getElementById('reward-cost').value,10)||0);
+  if(!name){ toast('Впиши название'); return; }
+  if(!cost){ toast('Впиши стоимость'); return; }
+  const category=document.getElementById('reward-cat').value.trim();
+  const desc=document.getElementById('reward-desc').value.trim();
+  if(editingRewardId){
+    const r=coins().rewards.find(x=>x.id===editingRewardId);
+    r.name=name; r.cost=cost; r.category=category; r.desc=desc;
+  } else {
+    coins().rewards.push({ id:uid(), name, cost, category, desc, created:Date.now() });
+  }
+  save(); closeModal('reward-modal'); renderCoins();
+  toast('Награда сохранена');
+}
+function deleteRewardFromModal(){
+  if(!editingRewardId) return;
+  if(!confirm('Удалить награду?')) return;
+  coins().rewards = coins().rewards.filter(r=>r.id!==editingRewardId);
+  save(); closeModal('reward-modal'); renderCoins();
+}
+// spend coins on a reward — allowed even into negative (pleasure "on credit")
+function spendReward(id){
+  const r = coins().rewards.find(x=>x.id===id); if(!r) return;
+  const bal = coinBalance();
+  const willBeNegative = (bal - r.cost) < 0;
+  const msg = willBeNegative
+    ? `Потратить ${r.cost} монет на «${r.name}»? Не хватает — баланс уйдёт в минус (удовольствие в долг).`
+    : `Потратить ${r.cost} монет на «${r.name}»?`;
+  if(!confirm(msg)) return;
+  coinAdd(-r.cost, 'Награда: '+r.name, 'reward:'+r.id);
+  save(); renderCoins(); renderOverview();
+  toast(willBeNegative?'Взято в долг ⚠':'Награда получена 🎉');
+}
+
+// ---- coin stats for a period ----
+function coinStats(fromKey){
+  let earned=0, spent=0;
+  coins().ledger.forEach(e=>{
+    if(fromKey && e.date<fromKey) return;
+    if(e.amount>0) earned+=e.amount; else spent+=Math.abs(e.amount);
+  });
+  return { earned, spent, net: earned-spent };
+}
+
+function renderCoins(){
+  const box = document.getElementById('coins-body');
+  if(!box) return;
+  const bal = coinBalance();
+  const negative = bal<0;
+  const tk = todayKey();
+  const dayS = coinStats(tk);
+  const weekS = coinStats(weekStartKey(tk));
+  const monthS = coinStats(tk.slice(0,8)+'01');
+  const allS = coinStats(null);
+
+  // balance hero
+  const hero = `<div class="coin-hero ${negative?'neg':''}">
+    <div class="coin-bal">◆ ${bal}</div>
+    <div class="coin-bal-l">${negative?'баланс в минусе — удовольствие в долг ⚠':'монет на балансе'}</div>
+    ${negative?`<div class="coin-warn">Ты взял удовольствий больше, чем заработал. Верни баланс в плюс дисциплиной.</div>`:''}
+  </div>`;
+
+  // period stats
+  const statBox = (s,l)=>`<div class="coin-stat"><div class="cs-n"><span style="color:var(--teal)">+${s.earned}</span> / <span style="color:var(--rose)">−${s.spent}</span></div><div class="cs-l">${l}</div></div>`;
+  const stats = `<div class="coin-stats">
+    ${statBox(dayS,'сегодня')}${statBox(weekS,'неделя')}${statBox(monthS,'месяц')}${statBox(allS,'всё время')}
+  </div>`;
+
+  // rewards shop
+  const rewardsHtml = coins().rewards.length
+    ? `<div class="reward-grid">${coins().rewards.map(r=>{
+        const afford = bal>=r.cost;
+        return `<div class="reward-card">
+          <div class="reward-main">
+            <div class="reward-name">${esc(r.name)}</div>
+            ${r.category?`<div class="reward-cat">${esc(r.category)}</div>`:''}
+            ${r.desc?`<div class="reward-desc">${esc(r.desc)}</div>`:''}
+          </div>
+          <div class="reward-foot">
+            <span class="reward-cost">◆ ${r.cost}</span>
+            <button class="btn ${afford?'btn-primary':'btn-ghost'} btn-sm" onclick="spendReward('${r.id}')">${afford?'Потратить':'В долг'}</button>
+            <button class="icon-btn" onclick="openRewardModal('${r.id}')">✎</button>
+          </div>
+        </div>`;
+      }).join('')}</div>`
+    : `<div class="wf-none">Наград пока нет. Создай то, чем себя награждаешь за дисциплину.</div>`;
+
+  // ledger history
+  const ledger = coins().ledger.slice().sort((a,b)=>b.created-a.created).slice(0,80);
+  const ledgerHtml = ledger.length ? ledger.map(e=>{
+    const dl = new Date(e.date+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+    const pos = e.amount>0;
+    return `<div class="coin-led">
+      <div class="coin-led-icon ${pos?'pos':'neg'}">${pos?'+':'−'}</div>
+      <div class="coin-led-main"><div class="coin-led-reason">${esc(e.reason)}</div><div class="coin-led-date">${dl}</div></div>
+      <div class="coin-led-amt ${pos?'pos':'neg'}">${pos?'+':'−'}${Math.abs(e.amount)}</div>
+      <span class="x" onclick="deleteLedgerEntry('${e.id}')">✕</span>
+    </div>`;
+  }).join('') : `<div class="wf-none">Пока нет ни начислений, ни списаний.</div>`;
+
+  box.innerHTML = `
+    ${hero}
+    ${stats}
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="margin:0">Награды</h3>
+        <button class="btn btn-ghost btn-sm" onclick="openRewardModal()">+ Награда</button>
+      </div>
+      ${rewardsHtml}
+    </div>
+    <div class="chart-wrap">
+      <h3>История монет</h3>
+      <div class="coin-led-list">${ledgerHtml}</div>
     </div>
   `;
 }
@@ -3516,8 +3856,11 @@ function saveHabit() {
 function deleteHabit(id){ if(confirm('Удалить привычку и её историю?')){ data.habits=data.habits.filter(h=>h.id!==id); save(); closeModal('habit-detail-modal'); renderHabits(); } }
 function toggleDay(hid, dateKey) {
   const h = data.habits.find(x=>x.id===hid);
+  const nowOn = !h.log[dateKey];
   if (h.log[dateKey]) delete h.log[dateKey]; else h.log[dateKey] = true;
   save(); renderHabits();
+  // award coins only when toggling TODAY's completion
+  if(dateKey===todayKey()) coinsOnHabitToggle(hid, nowOn);
   if(document.getElementById('habit-detail-modal').classList.contains('open')) openHabitDetail(hid);
 }
 function lastNDays(n) {
@@ -3707,9 +4050,11 @@ function stepTask(id, dir){
 }
 function toggleTaskDone(id){
   const t = data.tasks.find(x=>x.id===id); if(!t) return;
-  if(t.col==='done'){ t.col = t.prevCol || 'todo'; delete t.doneAt; }
+  if(t.col==='done'){ t.col = t.prevCol || 'todo'; delete t.doneAt; coinRemoveBySource('task:'+id); }
   else { t.prevCol = t.col; t.col='done'; t.doneAt=Date.now(); }
   save(); renderTasks(); renderLogbook();
+  if(t.col==='done') coinsOnTaskDone(id);
+  else refreshCoinsUI();
 }
 // task completed today still shows on the board; older completions live in the logbook
 function doneDateKey(t){ return t.doneAt ? localKey(new Date(t.doneAt)) : null; }
@@ -4516,8 +4861,13 @@ function renderOverview() {
     }).join('')}</div>` : `<div class="ov-empty">На ближайшую неделю событий нет</div>`}
   </div>`;
 
+  // coins card
+  const coinBal = coinBalance();
+  const coinsCard = card('coins', '◆ Монеты',
+    `<div class="ov-big" style="color:${coinBal<0?'var(--rose)':'var(--amber)'}">${coinBal}</div><div class="ov-note">${coinBal<0?'в минусе — удовольствие в долг ⚠':'монет на балансе'}</div>`);
+
   box.innerHTML = `<div class="ov-grid">
-    ${habitsCard}${tasksCard}${projCard}${dayCard}${finCard}${mealCard}${winsCard}${dreamsCard}${wheelCard}
+    ${habitsCard}${tasksCard}${projCard}${dayCard}${finCard}${coinsCard}${mealCard}${winsCard}${dreamsCard}${wheelCard}
   </div>
   ${upcomingCard}`;
 }
@@ -4546,7 +4896,7 @@ document.getElementById('import-file').addEventListener('change', e => {
 /* ============ UTIL ============ */
 function esc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderWheel(); renderDreams(); renderWins(); renderFinance(); renderOverview(); }
+function renderAll(){ renderProjects(); renderHabits(); renderTasks(); renderLogbook(); renderDump(); renderWheel(); renderDreams(); renderWins(); renderFinance(); renderCoins(); renderOverview(); }
 
 /* clock */
 function tickClock(){
