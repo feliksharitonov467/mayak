@@ -404,6 +404,21 @@
   .ach-action { flex: none; }
   .ach-prog-n { font-size: 12.5px; color: var(--text-faint); }
   .ach-got { font-size: 12px; color: var(--teal); }
+  .ach-head-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+  .ach-edit { color: var(--text-faint); cursor: pointer; font-size: 12px; margin-left: 4px; }
+  .ach-edit:hover { color: var(--amber); }
+  .ach-manual { display: flex; align-items: center; gap: 8px; }
+  .ach-manual .icon-btn { width: 30px; height: 30px; }
+  .ach-journal { display: flex; flex-direction: column; gap: 6px; }
+  .ach-journal-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
+  .ach-journal-check { flex: none; }
+  .ach-journal-title { flex: 1; font-size: 13.5px; }
+  .ach-journal-meta { font-size: 11.5px; color: var(--text-faint); }
+  .coin-style-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .coin-style { width: 46px; height: 46px; font-size: 22px; border: 1px solid var(--line); background: var(--ink-soft); border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .coin-style.on { border-color: var(--amber); background: var(--panel-2); box-shadow: 0 0 0 1px var(--amber) inset; }
+  .coin-style-custom { display: flex; gap: 8px; align-items: center; }
+  .coin-style-custom input { width: 120px; text-align: center; font-size: 18px; }
 
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
@@ -1567,6 +1582,56 @@
   </div>
 </div>
 
+<!-- Custom achievement modal -->
+<div class="modal-bg" id="ach-modal">
+  <div class="modal">
+    <h3 class="display" id="ach-modal-title">Своё достижение</h3>
+    <div style="display:flex;gap:10px">
+      <label class="fld" style="width:80px"><span>Значок</span><input type="text" id="ach-icon" maxlength="4" placeholder="🎯"></label>
+      <label class="fld" style="flex:1"><span>Название</span><input type="text" id="ach-title" placeholder="Напр. 20 тренировок"></label>
+    </div>
+    <label class="fld"><span>Описание (необязательно)</span><input type="text" id="ach-desc" placeholder="Что нужно сделать"></label>
+    <label class="fld"><span>Что считать (прогресс)</span><select id="ach-metric"></select></label>
+    <div style="display:flex;gap:10px">
+      <label class="fld" style="flex:1"><span>Цель (число)</span><input type="number" id="ach-goal" inputmode="numeric" placeholder="1"></label>
+      <label class="fld" style="flex:1"><span>Награда, монет</span><input type="number" id="ach-reward" inputmode="numeric" placeholder="20"></label>
+    </div>
+    <p style="font-size:11.5px;color:var(--text-faint);margin-bottom:12px">«Ручной счётчик» — сам жмёшь +1, когда выполнил шаг. Остальные считаются автоматически из твоих данных.</p>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-ghost btn-sm" id="ach-delete" onclick="deleteAchFromModal()" style="display:none">Удалить</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn btn-ghost" onclick="closeModal('ach-modal')">Отмена</button>
+        <button class="btn btn-primary" onclick="saveAch()">Сохранить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Achievement import modal -->
+<div class="modal-bg" id="achimport-modal">
+  <div class="modal modal-wide">
+    <h3 class="display">Импорт достижений</h3>
+    <p style="font-size:13px;color:var(--text-dim);margin-bottom:10px">Придумай с ИИ свой трек достижений и вставь JSON-массив.</p>
+    <textarea id="achimport-text" rows="7" placeholder='[
+  {"icon":"🏋️","title":"30 тренировок","desc":"Сходи в зал 30 раз","goal":30,"reward":150,"metric":"manual"},
+  {"title":"50 побед","goal":50,"reward":200,"metric":"wins"}
+]' style="font-family:monospace;font-size:12.5px"></textarea>
+    <div id="achimport-preview" style="margin-top:10px"></div>
+    <details style="margin-top:12px">
+      <summary style="cursor:pointer;color:var(--amber);font-size:13px">Формат и промпт для ИИ</summary>
+      <div style="font-size:12.5px;color:var(--text-dim);margin-top:8px;line-height:1.6">
+        Поля: <code>icon</code> (эмодзи), <code>title</code>, <code>desc</code>, <code>goal</code> (число), <code>reward</code> (монет), <code>metric</code>.<br>
+        <code>metric</code> — что считать: <code>manual</code> (сам жмёшь +1), <code>wins</code>, <code>tasks</code>, <code>habitStreak</code>, <code>projects</code>, <code>finDays</code>, <code>dayRatings</code>, <code>coinsEarned</code>, <code>mealDays</code>.<br><br>
+        <b>Промпт для ИИ:</b> «Составь мне трек из 8 личных достижений в стиле Duolingo. Верни JSON-массив с полями icon, title, desc, goal, reward, metric. metric ставь manual, если это личная цель не из списка. Только JSON.»
+      </div>
+    </details>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('achimport-modal')">Отмена</button>
+      <button class="btn btn-primary" onclick="doAchImport()">Проверить и добавить</button>
+    </div>
+  </div>
+</div>
+
 <!-- Import modal -->
 <div class="modal-bg" id="finimport-modal">
   <div class="modal modal-wide">
@@ -1892,6 +1957,9 @@ window.onAuthChange = async function(user) {
       if (!data.coins.rules || typeof data.coins.rules !== 'object') data.coins.rules = {habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70};
       if (!Array.isArray(data.coins.rewards)) data.coins.rewards = [];
       if (!data.coins.achievements || typeof data.coins.achievements !== 'object') data.coins.achievements = {};
+      if (!Array.isArray(data.coins.customAchievements)) data.coins.customAchievements = [];
+      if (!data.coins.achProgress || typeof data.coins.achProgress !== 'object') data.coins.achProgress = {};
+      if (typeof data.coins.symbol !== 'string' || !data.coins.symbol) data.coins.symbol = '🪙';
       if (!data.meals || typeof data.meals !== 'object') data.meals = { plan:{}, library:[], goals:{calories:0,protein:0,fat:0,carbs:0,budget:0} };
       if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
       if (!Array.isArray(data.meals.library)) data.meals.library = [];
@@ -3269,6 +3337,20 @@ function renderFinance(){
 
 /* ============ COINS / GAMIFICATION ============ */
 function coins(){ return data.coins; }
+// coin visual style — user-selectable symbol shown everywhere the currency appears
+const COIN_STYLES = ['🪙','◆','⭐','💰','🟡','💎','🔶','🏅','☀️','🌟','🍀','❤️'];
+function coinSymbol(){ return (data.coins && data.coins.symbol) || '🪙'; }
+function setCoinSymbol(sym){
+  data.coins.symbol = sym;
+  save(); renderCoins(); renderOverview();
+  const v=document.getElementById('view-achievements'); if(v&&v.classList.contains('active')) renderAchievements();
+  toast('Монета обновлена: '+sym);
+}
+function applyCustomCoin(){
+  const v = document.getElementById('coin-custom-sym').value.trim();
+  if(!v){ toast('Впиши эмодзи'); return; }
+  setCoinSymbol(v);
+}
 function coinBalance(){ return coins().ledger.reduce((a,e)=>a+e.amount,0); }
 // add a ledger entry (amount can be + or -). source dedups auto-grants.
 function coinAdd(amount, reason, source){
@@ -3436,8 +3518,9 @@ function renderCoins(){
   const allS = coinStats(null);
 
   // balance hero
+  const sym = coinSymbol();
   const hero = `<div class="coin-hero ${negative?'neg':''}">
-    <div class="coin-bal">◆ ${bal}</div>
+    <div class="coin-bal">${sym} ${bal}</div>
     <div class="coin-bal-l">${negative?'баланс в минусе — удовольствие в долг ⚠':'монет на балансе'}</div>
     ${negative?`<div class="coin-warn">Ты взял удовольствий больше, чем заработал. Верни баланс в плюс дисциплиной.</div>`:''}
   </div>`;
@@ -3459,7 +3542,7 @@ function renderCoins(){
             ${r.desc?`<div class="reward-desc">${esc(r.desc)}</div>`:''}
           </div>
           <div class="reward-foot">
-            <span class="reward-cost">◆ ${r.cost}</span>
+            <span class="reward-cost">${sym} ${r.cost}</span>
             <button class="btn ${afford?'btn-primary':'btn-ghost'} btn-sm" onclick="spendReward('${r.id}')">${afford?'Потратить':'В долг'}</button>
             <button class="icon-btn" onclick="openRewardModal('${r.id}')">✎</button>
           </div>
@@ -3480,11 +3563,24 @@ function renderCoins(){
     </div>`;
   }).join('') : `<div class="wf-none">Пока нет ни начислений, ни списаний.</div>`;
 
+  const achSum = achievementsSummary();
+  const stylePicker = `<div class="chart-wrap" style="margin-top:20px">
+    <h3>Дизайн монеты</h3>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px">Выбери символ валюты — он показывается везде: на балансе, в наградах, в достижениях.</p>
+    <div class="coin-style-row">
+      ${COIN_STYLES.map(s=>`<button class="coin-style ${s===sym?'on':''}" onclick="setCoinSymbol('${s}')">${s}</button>`).join('')}
+    </div>
+    <div class="coin-style-custom">
+      <input type="text" id="coin-custom-sym" maxlength="4" placeholder="свой эмодзи" value="${COIN_STYLES.includes(sym)?'':esc(sym)}">
+      <button class="btn btn-ghost btn-sm" onclick="applyCustomCoin()">Применить</button>
+    </div>
+  </div>`;
+
   box.innerHTML = `
     ${hero}
     ${stats}
     <div class="ach-teaser" onclick="switchView('achievements')">
-      🏅 Достижения: <b>${achievementsSummary().unlocked}</b> из ${achievementsSummary().total} открыто <span style="margin-left:auto;color:var(--amber)">открыть →</span>
+      🏅 Достижения: ${achSum.ready?`<b style="color:var(--amber)">готово забрать ${achSum.ready}</b> · `:''}активных <b>${achSum.active}</b> · получено <b>${achSum.claimed}</b> <span style="margin-left:auto;color:var(--amber)">открыть →</span>
     </div>
     <div class="chart-wrap" style="margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
@@ -3493,6 +3589,7 @@ function renderCoins(){
       </div>
       ${rewardsHtml}
     </div>
+    ${stylePicker}
     <div class="chart-wrap">
       <h3>История монет</h3>
       <div class="coin-led-list">${ledgerHtml}</div>
@@ -3502,71 +3599,212 @@ function renderCoins(){
 
 /* ============ ACHIEVEMENTS ============ */
 // Each achievement: id, icon, title, desc, goal, reward (coins), and cur(data) -> current progress number.
+// built-in achievements
 const ACHIEVEMENTS = [
-  { id:'habit3', icon:'✦', title:'Первый разгон', desc:'3 дня подряд выполняй любую привычку', goal:3, reward:20,
-    cur:()=> data.habits.reduce((m,h)=>Math.max(m, bestStreak(h)),0) },
-  { id:'habit7', icon:'🔥', title:'Неделя силы', desc:'7 дней подряд выполняй привычку', goal:7, reward:50,
-    cur:()=> data.habits.reduce((m,h)=>Math.max(m, bestStreak(h)),0) },
-  { id:'wins10', icon:'🏆', title:'Победитель', desc:'10 побед над собой', goal:10, reward:50,
-    cur:()=> data.wins.length },
-  { id:'wins25', icon:'🛡', title:'Железная воля', desc:'25 побед над собой', goal:25, reward:120,
-    cur:()=> data.wins.length },
-  { id:'tasks30', icon:'▦', title:'Работяга', desc:'Выполни 30 задач', goal:30, reward:60,
-    cur:()=> data.tasks.filter(t=>t.col==='done').length },
-  { id:'proj1', icon:'🏁', title:'Финишер', desc:'Заверши 1 проект', goal:1, reward:40,
-    cur:()=> (data.projectArchive||[]).length },
-  { id:'fin7', icon:'₽', title:'Под контролем', desc:'Веди финансы 7 разных дней', goal:7, reward:40,
-    cur:()=> new Set(data.finance.operations.map(o=>o.date)).size },
-  { id:'day7', icon:'☺', title:'Осознанность', desc:'Оцени день 7 раз', goal:7, reward:40,
-    cur:()=> Object.values(data.days).filter(d=>d.score>0).length },
-  { id:'coins200', icon:'◆', title:'Копилка', desc:'Заработай 200 монет за всё время', goal:200, reward:50,
-    cur:()=> coins().ledger.filter(e=>e.amount>0).reduce((a,e)=>a+e.amount,0) },
-  { id:'meal7', icon:'🍽', title:'По плану', desc:'Запланируй питание в 7 разных дней', goal:7, reward:40,
-    cur:()=> Object.keys(data.meals.plan).filter(k=>MEAL_TYPES.some(m=>(data.meals.plan[k][m.id]||[]).length)).length },
+  { id:'habit3', icon:'🔥', title:'Первый разгон', desc:'3 дня подряд выполняй любую привычку', goal:3, reward:20, metric:'habitStreak' },
+  { id:'habit7', icon:'🔥', title:'Неделя силы', desc:'7 дней подряд выполняй привычку', goal:7, reward:50, metric:'habitStreak' },
+  { id:'wins10', icon:'🏆', title:'Победитель', desc:'10 побед над собой', goal:10, reward:50, metric:'wins' },
+  { id:'wins25', icon:'🛡', title:'Железная воля', desc:'25 побед над собой', goal:25, reward:120, metric:'wins' },
+  { id:'tasks30', icon:'✅', title:'Работяга', desc:'Выполни 30 задач', goal:30, reward:60, metric:'tasks' },
+  { id:'proj1', icon:'🏁', title:'Финишер', desc:'Заверши 1 проект', goal:1, reward:40, metric:'projects' },
+  { id:'fin7', icon:'💰', title:'Под контролем', desc:'Веди финансы 7 разных дней', goal:7, reward:40, metric:'finDays' },
+  { id:'day7', icon:'📔', title:'Осознанность', desc:'Оцени день 7 раз', goal:7, reward:40, metric:'dayRatings' },
+  { id:'coins200', icon:'🪙', title:'Копилка', desc:'Заработай 200 монет за всё время', goal:200, reward:50, metric:'coinsEarned' },
+  { id:'meal7', icon:'🍽️', title:'По плану', desc:'Запланируй питание в 7 разных дней', goal:7, reward:40, metric:'mealDays' },
 ];
+// metric id -> current progress function. 'manual' uses a stored counter.
+const ACH_METRICS = {
+  habitStreak: { label:'Серия привычки (дней подряд)', fn:()=> data.habits.reduce((m,h)=>Math.max(m, bestStreak(h)),0) },
+  wins:        { label:'Побед над собой', fn:()=> data.wins.length },
+  tasks:       { label:'Выполнено задач', fn:()=> data.tasks.filter(t=>t.col==='done').length },
+  projects:    { label:'Завершено проектов', fn:()=> (data.projectArchive||[]).length },
+  finDays:     { label:'Дней с финансами', fn:()=> new Set(data.finance.operations.map(o=>o.date)).size },
+  dayRatings:  { label:'Оценок дня', fn:()=> Object.values(data.days).filter(d=>d.score>0).length },
+  coinsEarned: { label:'Заработано монет всего', fn:()=> coins().ledger.filter(e=>e.amount>0).reduce((a,e)=>a+e.amount,0) },
+  mealDays:    { label:'Дней с планом питания', fn:()=> Object.keys(data.meals.plan).filter(k=>MEAL_TYPES.some(m=>(data.meals.plan[k][m.id]||[]).length)).length },
+  manual:      { label:'Ручной счётчик (жми +1)', fn:(a)=> data.coins.achProgress[a.id]||0 },
+};
+// all achievements = built-in + custom
+function allAchievements(){ return ACHIEVEMENTS.concat(data.coins.customAchievements||[]); }
+function achCur(a){
+  const m = ACH_METRICS[a.metric] || ACH_METRICS.manual;
+  return Math.max(0, m.fn(a)||0);
+}
 function achState(a){
-  const cur = Math.max(0, a.cur());
+  const cur = achCur(a);
   const done = cur>=a.goal;
   const claimed = !!(data.coins.achievements[a.id] && data.coins.achievements[a.id].claimed);
   return { cur:Math.min(cur,a.goal), rawCur:cur, done, claimed, pct: Math.min(100, Math.round(cur/a.goal*100)) };
 }
 function claimAchievement(id){
-  const a = ACHIEVEMENTS.find(x=>x.id===id); if(!a) return;
+  const a = allAchievements().find(x=>x.id===id); if(!a) return;
   const st = achState(a);
   if(!st.done || st.claimed) return;
-  data.coins.achievements[id] = { claimed:true, at:Date.now() };
+  data.coins.achievements[id] = { claimed:true, at:Date.now(), title:a.title, reward:a.reward };
   coinAdd(a.reward, 'Достижение: '+a.title, 'achievement:'+id);
   save(); renderAchievements(); renderCoins(); renderOverview();
-  toast(`Достижение получено! +${a.reward} ◆`);
+  toast(`Достижение получено! +${a.reward} ${coinSymbol()}`);
+}
+// manual counter controls
+function achBump(id, delta){
+  data.coins.achProgress[id] = Math.max(0, (data.coins.achProgress[id]||0)+delta);
+  save(); renderAchievements();
 }
 function achievementsSummary(){
-  let unlocked=0; ACHIEVEMENTS.forEach(a=>{ if(achState(a).done) unlocked++; });
-  return { unlocked, total: ACHIEVEMENTS.length };
+  const active = allAchievements().filter(a=>!achState(a).claimed);
+  let ready=0; active.forEach(a=>{ if(achState(a).done) ready++; });
+  const claimedCount = Object.keys(data.coins.achievements).length;
+  return { active: active.length, ready, claimed: claimedCount, total: allAchievements().length };
 }
 function openAchievements(){ switchView('achievements'); }
+
+// custom achievement create/edit
+let editingAchId = null;
+function openAchModal(id){
+  editingAchId = id||null;
+  const metricSel = document.getElementById('ach-metric');
+  metricSel.innerHTML = Object.entries(ACH_METRICS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  if(id){
+    const a = (data.coins.customAchievements||[]).find(x=>x.id===id);
+    if(!a) return;
+    document.getElementById('ach-modal-title').textContent = 'Изменить достижение';
+    document.getElementById('ach-icon').value = a.icon||'';
+    document.getElementById('ach-title').value = a.title||'';
+    document.getElementById('ach-desc').value = a.desc||'';
+    document.getElementById('ach-goal').value = a.goal||1;
+    document.getElementById('ach-reward').value = a.reward||0;
+    metricSel.value = a.metric||'manual';
+    document.getElementById('ach-delete').style.display='';
+  } else {
+    document.getElementById('ach-modal-title').textContent = 'Своё достижение';
+    document.getElementById('ach-icon').value = '🎯';
+    document.getElementById('ach-title').value = '';
+    document.getElementById('ach-desc').value = '';
+    document.getElementById('ach-goal').value = 1;
+    document.getElementById('ach-reward').value = 20;
+    metricSel.value = 'manual';
+    document.getElementById('ach-delete').style.display='none';
+  }
+  document.getElementById('ach-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('ach-title').focus(),50);
+}
+function saveAch(){
+  const title = document.getElementById('ach-title').value.trim();
+  if(!title){ toast('Впиши название'); return; }
+  const icon = document.getElementById('ach-icon').value.trim() || '🎯';
+  const desc = document.getElementById('ach-desc').value.trim();
+  const goal = Math.max(1, parseInt(document.getElementById('ach-goal').value,10)||1);
+  const reward = Math.max(0, parseInt(document.getElementById('ach-reward').value,10)||0);
+  const metric = document.getElementById('ach-metric').value;
+  if(editingAchId){
+    const a = data.coins.customAchievements.find(x=>x.id===editingAchId);
+    Object.assign(a, {icon,title,desc,goal,reward,metric});
+  } else {
+    data.coins.customAchievements.push({ id:'custom_'+uid(), icon, title, desc, goal, reward, metric });
+  }
+  save(); closeModal('ach-modal'); renderAchievements();
+  toast('Достижение сохранено');
+}
+function deleteAchFromModal(){
+  if(!editingAchId) return;
+  if(!confirm('Удалить это достижение?')) return;
+  data.coins.customAchievements = data.coins.customAchievements.filter(a=>a.id!==editingAchId);
+  delete data.coins.achievements[editingAchId];
+  delete data.coins.achProgress[editingAchId];
+  save(); closeModal('ach-modal'); renderAchievements();
+}
+
+// import custom achievements via JSON (AI-assisted)
+function openAchImport(){
+  document.getElementById('achimport-text').value='';
+  document.getElementById('achimport-preview').innerHTML='';
+  document.getElementById('achimport-modal').classList.add('open');
+}
+function doAchImport(){
+  const raw = document.getElementById('achimport-text').value.trim();
+  const prev = document.getElementById('achimport-preview');
+  if(!raw){ prev.innerHTML='<div class="fin-import-err">Пусто — вставь JSON</div>'; return; }
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch(e){ prev.innerHTML=`<div class="fin-import-err">Ошибка JSON: ${esc(e.message)}</div>`; return; }
+  if(!Array.isArray(parsed)) parsed=[parsed];
+  const valid=[];
+  parsed.forEach(o=>{
+    const title = o.title!=null?String(o.title).trim():'';
+    if(!title) return;
+    const metric = ACH_METRICS[o.metric] ? o.metric : 'manual';
+    valid.push({ id:'custom_'+uid(), icon:o.icon?String(o.icon):'🎯', title, desc:o.desc?String(o.desc):'',
+      goal:Math.max(1,parseInt(o.goal,10)||1), reward:Math.max(0,parseInt(o.reward,10)||0), metric });
+  });
+  if(!valid.length){ prev.innerHTML='<div class="fin-import-err">Не найдено корректных достижений (нужно поле title).</div>'; return; }
+  prev.innerHTML = `<div class="fin-import-ok">Готово: <b>${valid.length}</b> достижений.
+    <div style="margin-top:10px"><button class="btn btn-primary btn-sm" onclick="confirmAchImport()">Добавить ${valid.length}</button></div></div>`;
+  window._achImportBuffer = valid;
+}
+function confirmAchImport(){
+  const buf = window._achImportBuffer||[]; if(!buf.length) return;
+  data.coins.customAchievements.push(...buf);
+  window._achImportBuffer=null;
+  save(); closeModal('achimport-modal'); renderAchievements();
+  toast(`Добавлено достижений: ${buf.length}`);
+}
+
 function renderAchievements(){
   const box = document.getElementById('achievements-body');
   if(!box) return;
   const sum = achievementsSummary();
-  const rows = ACHIEVEMENTS.map(a=>{
+  const sym = coinSymbol();
+  // active achievements (not yet claimed)
+  const active = allAchievements().filter(a=>!achState(a).claimed);
+  const rows = active.length ? active.map(a=>{
     const st = achState(a);
-    const cls = st.done ? (st.claimed?'done claimed':'done') : 'locked';
-    const action = st.done
-      ? (st.claimed ? `<span class="ach-got">получено</span>` : `<button class="btn btn-primary btn-sm" onclick="claimAchievement('${a.id}')">Забрать +${a.reward} ◆</button>`)
-      : `<span class="ach-prog-n">${st.rawCur} / ${a.goal}</span>`;
+    const isCustom = a.id.startsWith('custom_');
+    const isManual = a.metric==='manual';
+    const cls = st.done ? 'done' : 'locked';
+    let action;
+    if(st.done){
+      action = `<button class="btn btn-primary btn-sm" onclick="claimAchievement('${a.id}')">Забрать +${a.reward} ${sym}</button>`;
+    } else if(isManual){
+      action = `<div class="ach-manual"><button class="icon-btn" onclick="achBump('${a.id}',-1)">−</button><span class="ach-prog-n">${st.rawCur}/${a.goal}</span><button class="icon-btn" onclick="achBump('${a.id}',1)">+</button></div>`;
+    } else {
+      action = `<span class="ach-prog-n">${st.rawCur} / ${a.goal}</span>`;
+    }
     return `<div class="ach-card ${cls}">
       <div class="ach-icon">${a.icon}</div>
       <div class="ach-main">
-        <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''}</div>
-        <div class="ach-desc">${esc(a.desc)}</div>
+        <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''}${isCustom?` <span class="ach-edit" onclick="openAchModal('${a.id}')">✎</span>`:''}</div>
+        <div class="ach-desc">${esc(a.desc||'')}</div>
         <div class="ach-bar"><i style="width:${st.pct}%"></i></div>
       </div>
       <div class="ach-action">${action}</div>
     </div>`;
-  }).join('');
+  }).join('') : `<div class="wf-none">Активных достижений нет. Создай своё или импортируй.</div>`;
+
+  // journal of claimed achievements (moved out of the active list)
+  const claimedList = Object.entries(data.coins.achievements)
+    .map(([id,rec])=>({id, ...rec}))
+    .sort((a,b)=>(b.at||0)-(a.at||0));
+  const journalHtml = claimedList.length ? claimedList.map(rec=>{
+    const dl = rec.at ? new Date(rec.at).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}) : '';
+    return `<div class="ach-journal-row">
+      <span class="ach-journal-check">🏅</span>
+      <span class="ach-journal-title">${esc(rec.title||id)}</span>
+      <span class="ach-journal-meta">+${rec.reward||0} ${sym} · ${dl}</span>
+    </div>`;
+  }).join('') : `<div class="wf-none" style="padding:12px 0">Пока ничего не получено. Выполняй достижения — они уедут сюда.</div>`;
+
   box.innerHTML = `
-    <div class="ach-summary">Открыто достижений: <b>${sum.unlocked}</b> из ${sum.total}</div>
+    <div class="ach-head-row">
+      <div class="ach-summary">Активных: <b>${sum.active}</b>${sum.ready?` · готово забрать: <b style="color:var(--amber)">${sum.ready}</b>`:''} · получено: <b>${sum.claimed}</b></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="openAchImport()">⇧ Импорт</button>
+        <button class="btn btn-primary btn-sm" onclick="openAchModal()">+ Своё</button>
+      </div>
+    </div>
     <div class="ach-list">${rows}</div>
+    <div class="chart-wrap" style="margin-top:22px">
+      <h3>🏅 Журнал достижений</h3>
+      <div class="ach-journal">${journalHtml}</div>
+    </div>
   `;
 }
 
