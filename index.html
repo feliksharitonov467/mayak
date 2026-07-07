@@ -423,6 +423,8 @@
   .coin-upload { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
   .coin-upload-left { display: flex; align-items: center; gap: 10px; }
   .coin-bal .coin-img { width: 38px; height: 38px; vertical-align: -6px; }
+  .coin-preview-row { display: flex; align-items: center; gap: 14px; }
+  .coin-preview { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 14px; font-size: 30px; }
 
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
@@ -1165,6 +1167,11 @@
           <h2 class="display">Настройки</h2>
           <p>Часовой пояс и данные</p>
         </div>
+      </div>
+      <div class="card" style="max-width:520px;margin-bottom:16px">
+        <h3 style="font-size:15px;margin-bottom:6px">Дизайн монеты <span style="font-size:11px;color:var(--text-faint)">(для разработчика)</span></h3>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Символ или картинка валюты. По умолчанию — золотая монета с чебурашкой.</p>
+        <div id="coin-design-body"></div>
       </div>
       <div class="card" style="max-width:520px;margin-bottom:16px">
         <h3 style="font-size:15px;margin-bottom:6px">Разделы меню</h3>
@@ -1965,6 +1972,8 @@ window.onAuthChange = async function(user) {
       if (!data.coins.achProgress || typeof data.coins.achProgress !== 'object') data.coins.achProgress = {};
       if (typeof data.coins.symbol !== 'string' || !data.coins.symbol) data.coins.symbol = '🪙';
       if (typeof data.coins.image !== 'string') data.coins.image = '';
+      // default to the built-in Cheburashka coin unless the user already customized
+      if (typeof data.coins.useDefaultImg !== 'boolean') data.coins.useDefaultImg = !data.coins.image;
       if (!data.meals || typeof data.meals !== 'object') data.meals = { plan:{}, library:[], goals:{calories:0,protein:0,fat:0,carbs:0,budget:0} };
       if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
       if (!Array.isArray(data.meals.library)) data.meals.library = [];
@@ -2627,6 +2636,7 @@ function renderSettings(){
   if(!opts.find(t=>t.id===cur)) opts.unshift({id:cur, label:cur});
   sel.innerHTML = opts.map(t=>`<option value="${t.id}" ${t.id===cur?'selected':''}>${esc(t.label)}</option>`).join('');
   updateTzNow();
+  renderCoinDesign();
   renderSectionOrderList();
   renderOverviewCardsList();
 }
@@ -3343,10 +3353,16 @@ function renderFinance(){
 /* ============ COINS / GAMIFICATION ============ */
 function coins(){ return data.coins; }
 // coin visual style — user-selectable symbol shown everywhere the currency appears
+const DEFAULT_COIN_IMG = 'data:image/webp;base64,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';
 const COIN_STYLES = ['🪙','◆','⭐','💰','🟡','💎','🔶','🏅','☀️','🌟','🍀','❤️'];
 function coinSymbol(){ return (data.coins && data.coins.symbol) || '🪙'; }
-function coinImage(){ return (data.coins && data.coins.image) || ''; }
-// returns HTML for the coin icon at a given pixel size — <img> if a custom image is set, else the emoji/symbol
+// custom image if set; otherwise the built-in Cheburashka coin (unless the user picked an emoji)
+function coinImage(){
+  if(data.coins && data.coins.image) return data.coins.image;              // user-uploaded
+  if(data.coins && data.coins.useDefaultImg !== false) return DEFAULT_COIN_IMG; // built-in default
+  return '';                                                               // user chose an emoji
+}
+// returns HTML for the coin icon at a given pixel size — <img> if an image is active, else the emoji/symbol
 function coinIcon(size){
   const img = coinImage();
   if(img) return `<img src="${img}" class="coin-img" style="width:${size||18}px;height:${size||18}px" alt="монета">`;
@@ -3354,10 +3370,17 @@ function coinIcon(size){
 }
 function setCoinSymbol(sym){
   data.coins.symbol = sym;
-  data.coins.image = ''; // choosing an emoji clears any custom image
-  save(); renderCoins(); renderOverview();
+  data.coins.image = '';          // clear any uploaded image
+  data.coins.useDefaultImg = false; // emoji chosen -> don't fall back to the built-in coin
+  save(); renderCoins(); renderOverview(); renderCoinDesign();
   const v=document.getElementById('view-achievements'); if(v&&v.classList.contains('active')) renderAchievements();
   toast('Монета обновлена: '+sym);
+}
+function useDefaultCoin(){
+  data.coins.image = '';
+  data.coins.useDefaultImg = true;
+  save(); renderCoins(); renderOverview(); renderCoinDesign();
+  toast('Монета по умолчанию');
 }
 function applyCustomCoin(){
   const v = document.getElementById('coin-custom-sym').value.trim();
@@ -3373,24 +3396,25 @@ function uploadCoinImage(input){
   reader.onload = e => {
     const img = new Image();
     img.onload = () => {
-      // draw into a small square canvas (64x64) to keep the stored data tiny
-      const SIZE = 64;
+      const SIZE = 160;
       const canvas = document.createElement('canvas');
       canvas.width = SIZE; canvas.height = SIZE;
       const ctx = canvas.getContext('2d');
-      // cover-fit: crop to square, center
       const side = Math.min(img.width, img.height);
       const sx = (img.width - side)/2, sy = (img.height - side)/2;
+      // circular clip for a coin look
+      ctx.save();
+      ctx.beginPath(); ctx.arc(SIZE/2, SIZE/2, SIZE/2, 0, Math.PI*2); ctx.clip();
       ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+      ctx.restore();
       let dataUrl;
-      try { dataUrl = canvas.toDataURL('image/webp', 0.8); }
+      try { dataUrl = canvas.toDataURL('image/webp', 0.85); }
       catch(_) { dataUrl = canvas.toDataURL('image/png'); }
       if(!dataUrl || dataUrl.length < 30){ toast('Не удалось обработать картинку'); return; }
-      if(dataUrl.length > 60000){ // safety: ~60KB cap so it never bloats the save doc
-        dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-      }
+      if(dataUrl.length > 80000){ dataUrl = canvas.toDataURL('image/jpeg', 0.7); }
       data.coins.image = dataUrl;
-      save(); renderCoins(); renderOverview();
+      data.coins.useDefaultImg = false;
+      save(); renderCoins(); renderOverview(); renderCoinDesign();
       const vw=document.getElementById('view-achievements'); if(vw&&vw.classList.contains('active')) renderAchievements();
       toast('Своя монета загружена 🎉');
     };
@@ -3400,10 +3424,40 @@ function uploadCoinImage(input){
   reader.onerror = ()=>toast('Не удалось прочитать файл');
   reader.readAsDataURL(file);
 }
-function clearCoinImage(){
-  data.coins.image = '';
-  save(); renderCoins(); renderOverview();
-  toast('Вернулись к символу '+coinSymbol());
+function clearCoinImage(){ useDefaultCoin(); }
+// render the coin-design controls inside Settings
+function renderCoinDesign(){
+  const box = document.getElementById('coin-design-body');
+  if(!box) return;
+  const sym = coinSymbol();
+  const usingImg = !!coinImage();
+  const isDefault = usingImg && !data.coins.image; // built-in coin active
+  const isCustomImg = !!data.coins.image;
+  box.innerHTML = `
+    <div class="coin-preview-row">
+      <div class="coin-preview">${coinIcon(48)}</div>
+      <div style="font-size:12.5px;color:var(--text-dim)">
+        ${isCustomImg?'Своя загруженная монета':isDefault?'Монета по умолчанию (чебурашка)':'Символ: '+sym}
+      </div>
+    </div>
+    <div class="coin-style-row" style="margin-top:14px">
+      <button class="coin-style ${isDefault?'on':''}" onclick="useDefaultCoin()" title="По умолчанию">${`<img src="${DEFAULT_COIN_IMG}" class="coin-img" style="width:26px;height:26px">`}</button>
+      ${COIN_STYLES.map(s=>`<button class="coin-style ${(s===sym&&!usingImg)?'on':''}" onclick="setCoinSymbol('${s}')">${s}</button>`).join('')}
+    </div>
+    <div class="coin-style-custom" style="margin-top:10px">
+      <input type="text" id="coin-custom-sym" maxlength="4" placeholder="свой эмодзи" value="${(COIN_STYLES.includes(sym)||usingImg)?'':esc(sym)}">
+      <button class="btn btn-ghost btn-sm" onclick="applyCustomCoin()">Применить</button>
+    </div>
+    <div class="coin-upload">
+      <div class="coin-upload-left">
+        ${isCustomImg ? `<img src="${coinImage()}" class="coin-img" style="width:40px;height:40px"> <span style="font-size:12.5px;color:var(--teal)">своя монета активна</span>` : `<span style="font-size:12.5px;color:var(--text-dim)">Загрузи свою картинку (сожмётся в круглую иконку)</span>`}
+      </div>
+      <div style="display:flex;gap:8px">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer">Загрузить<input type="file" accept="image/*" style="display:none" onchange="uploadCoinImage(this)"></label>
+        ${isCustomImg ? `<button class="btn btn-ghost btn-sm" onclick="clearCoinImage()">Убрать</button>` : ''}
+      </div>
+    </div>
+  `;
 }
 function coinBalance(){ return coins().ledger.reduce((a,e)=>a+e.amount,0); }
 // add a ledger entry (amount can be + or -). source dedups auto-grants.
@@ -3619,26 +3673,6 @@ function renderCoins(){
   }).join('') : `<div class="wf-none">Пока нет ни начислений, ни списаний.</div>`;
 
   const achSum = achievementsSummary();
-  const stylePicker = `<div class="chart-wrap" style="margin-top:20px">
-    <h3>Дизайн монеты</h3>
-    <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px">Выбери символ валюты — он показывается везде: на балансе, в наградах, в достижениях.</p>
-    <div class="coin-style-row">
-      ${COIN_STYLES.map(s=>`<button class="coin-style ${(s===sym&&!hasImg)?'on':''}" onclick="setCoinSymbol('${s}')">${s}</button>`).join('')}
-    </div>
-    <div class="coin-style-custom">
-      <input type="text" id="coin-custom-sym" maxlength="4" placeholder="свой эмодзи" value="${(COIN_STYLES.includes(sym)||hasImg)?'':esc(sym)}">
-      <button class="btn btn-ghost btn-sm" onclick="applyCustomCoin()">Применить</button>
-    </div>
-    <div class="coin-upload">
-      <div class="coin-upload-left">
-        ${hasImg ? `<img src="${coinImage()}" class="coin-img" style="width:40px;height:40px" alt="монета"> <span style="font-size:12.5px;color:var(--teal)">своя монета активна</span>` : `<span style="font-size:12.5px;color:var(--text-dim)">Загрузи свою картинку монеты (она сожмётся в маленькую иконку)</span>`}
-      </div>
-      <div style="display:flex;gap:8px">
-        <label class="btn btn-ghost btn-sm" style="cursor:pointer">Загрузить<input type="file" accept="image/*" style="display:none" onchange="uploadCoinImage(this)"></label>
-        ${hasImg ? `<button class="btn btn-ghost btn-sm" onclick="clearCoinImage()">Убрать</button>` : ''}
-      </div>
-    </div>
-  </div>`;
 
   box.innerHTML = `
     ${hero}
@@ -3653,7 +3687,6 @@ function renderCoins(){
       </div>
       ${rewardsHtml}
     </div>
-    ${stylePicker}
     <div class="chart-wrap">
       <h3>История монет</h3>
       <div class="coin-led-list">${ledgerHtml}</div>
