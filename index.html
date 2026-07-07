@@ -419,6 +419,10 @@
   .coin-style.on { border-color: var(--amber); background: var(--panel-2); box-shadow: 0 0 0 1px var(--amber) inset; }
   .coin-style-custom { display: flex; gap: 8px; align-items: center; }
   .coin-style-custom input { width: 120px; text-align: center; font-size: 18px; }
+  .coin-img { border-radius: 50%; object-fit: cover; vertical-align: middle; display: inline-block; }
+  .coin-upload { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+  .coin-upload-left { display: flex; align-items: center; gap: 10px; }
+  .coin-bal .coin-img { width: 38px; height: 38px; vertical-align: -6px; }
 
   /* ---------- Meals ---------- */
   .meal-viewtoggle { display: flex; gap: 8px; margin-bottom: 18px; }
@@ -1960,6 +1964,7 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.coins.customAchievements)) data.coins.customAchievements = [];
       if (!data.coins.achProgress || typeof data.coins.achProgress !== 'object') data.coins.achProgress = {};
       if (typeof data.coins.symbol !== 'string' || !data.coins.symbol) data.coins.symbol = '🪙';
+      if (typeof data.coins.image !== 'string') data.coins.image = '';
       if (!data.meals || typeof data.meals !== 'object') data.meals = { plan:{}, library:[], goals:{calories:0,protein:0,fat:0,carbs:0,budget:0} };
       if (!data.meals.plan || typeof data.meals.plan !== 'object') data.meals.plan = {};
       if (!Array.isArray(data.meals.library)) data.meals.library = [];
@@ -3340,8 +3345,16 @@ function coins(){ return data.coins; }
 // coin visual style — user-selectable symbol shown everywhere the currency appears
 const COIN_STYLES = ['🪙','◆','⭐','💰','🟡','💎','🔶','🏅','☀️','🌟','🍀','❤️'];
 function coinSymbol(){ return (data.coins && data.coins.symbol) || '🪙'; }
+function coinImage(){ return (data.coins && data.coins.image) || ''; }
+// returns HTML for the coin icon at a given pixel size — <img> if a custom image is set, else the emoji/symbol
+function coinIcon(size){
+  const img = coinImage();
+  if(img) return `<img src="${img}" class="coin-img" style="width:${size||18}px;height:${size||18}px" alt="монета">`;
+  return `<span class="coin-sym">${coinSymbol()}</span>`;
+}
 function setCoinSymbol(sym){
   data.coins.symbol = sym;
+  data.coins.image = ''; // choosing an emoji clears any custom image
   save(); renderCoins(); renderOverview();
   const v=document.getElementById('view-achievements'); if(v&&v.classList.contains('active')) renderAchievements();
   toast('Монета обновлена: '+sym);
@@ -3350,6 +3363,47 @@ function applyCustomCoin(){
   const v = document.getElementById('coin-custom-sym').value.trim();
   if(!v){ toast('Впиши эмодзи'); return; }
   setCoinSymbol(v);
+}
+// upload a custom coin image: read file, downscale to a tiny icon, store as data URL
+function uploadCoinImage(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  if(!file.type.startsWith('image/')){ toast('Нужен файл-картинка'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      // draw into a small square canvas (64x64) to keep the stored data tiny
+      const SIZE = 64;
+      const canvas = document.createElement('canvas');
+      canvas.width = SIZE; canvas.height = SIZE;
+      const ctx = canvas.getContext('2d');
+      // cover-fit: crop to square, center
+      const side = Math.min(img.width, img.height);
+      const sx = (img.width - side)/2, sy = (img.height - side)/2;
+      ctx.drawImage(img, sx, sy, side, side, 0, 0, SIZE, SIZE);
+      let dataUrl;
+      try { dataUrl = canvas.toDataURL('image/webp', 0.8); }
+      catch(_) { dataUrl = canvas.toDataURL('image/png'); }
+      if(!dataUrl || dataUrl.length < 30){ toast('Не удалось обработать картинку'); return; }
+      if(dataUrl.length > 60000){ // safety: ~60KB cap so it never bloats the save doc
+        dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+      }
+      data.coins.image = dataUrl;
+      save(); renderCoins(); renderOverview();
+      const vw=document.getElementById('view-achievements'); if(vw&&vw.classList.contains('active')) renderAchievements();
+      toast('Своя монета загружена 🎉');
+    };
+    img.onerror = ()=>toast('Не удалось прочитать картинку');
+    img.src = e.target.result;
+  };
+  reader.onerror = ()=>toast('Не удалось прочитать файл');
+  reader.readAsDataURL(file);
+}
+function clearCoinImage(){
+  data.coins.image = '';
+  save(); renderCoins(); renderOverview();
+  toast('Вернулись к символу '+coinSymbol());
 }
 function coinBalance(){ return coins().ledger.reduce((a,e)=>a+e.amount,0); }
 // add a ledger entry (amount can be + or -). source dedups auto-grants.
@@ -3519,8 +3573,9 @@ function renderCoins(){
 
   // balance hero
   const sym = coinSymbol();
+  const hasImg = !!coinImage();
   const hero = `<div class="coin-hero ${negative?'neg':''}">
-    <div class="coin-bal">${sym} ${bal}</div>
+    <div class="coin-bal">${coinIcon(38)} ${bal}</div>
     <div class="coin-bal-l">${negative?'баланс в минусе — удовольствие в долг ⚠':'монет на балансе'}</div>
     ${negative?`<div class="coin-warn">Ты взял удовольствий больше, чем заработал. Верни баланс в плюс дисциплиной.</div>`:''}
   </div>`;
@@ -3542,7 +3597,7 @@ function renderCoins(){
             ${r.desc?`<div class="reward-desc">${esc(r.desc)}</div>`:''}
           </div>
           <div class="reward-foot">
-            <span class="reward-cost">${sym} ${r.cost}</span>
+            <span class="reward-cost">${coinIcon(15)} ${r.cost}</span>
             <button class="btn ${afford?'btn-primary':'btn-ghost'} btn-sm" onclick="spendReward('${r.id}')">${afford?'Потратить':'В долг'}</button>
             <button class="icon-btn" onclick="openRewardModal('${r.id}')">✎</button>
           </div>
@@ -3568,11 +3623,20 @@ function renderCoins(){
     <h3>Дизайн монеты</h3>
     <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px">Выбери символ валюты — он показывается везде: на балансе, в наградах, в достижениях.</p>
     <div class="coin-style-row">
-      ${COIN_STYLES.map(s=>`<button class="coin-style ${s===sym?'on':''}" onclick="setCoinSymbol('${s}')">${s}</button>`).join('')}
+      ${COIN_STYLES.map(s=>`<button class="coin-style ${(s===sym&&!hasImg)?'on':''}" onclick="setCoinSymbol('${s}')">${s}</button>`).join('')}
     </div>
     <div class="coin-style-custom">
-      <input type="text" id="coin-custom-sym" maxlength="4" placeholder="свой эмодзи" value="${COIN_STYLES.includes(sym)?'':esc(sym)}">
+      <input type="text" id="coin-custom-sym" maxlength="4" placeholder="свой эмодзи" value="${(COIN_STYLES.includes(sym)||hasImg)?'':esc(sym)}">
       <button class="btn btn-ghost btn-sm" onclick="applyCustomCoin()">Применить</button>
+    </div>
+    <div class="coin-upload">
+      <div class="coin-upload-left">
+        ${hasImg ? `<img src="${coinImage()}" class="coin-img" style="width:40px;height:40px" alt="монета"> <span style="font-size:12.5px;color:var(--teal)">своя монета активна</span>` : `<span style="font-size:12.5px;color:var(--text-dim)">Загрузи свою картинку монеты (она сожмётся в маленькую иконку)</span>`}
+      </div>
+      <div style="display:flex;gap:8px">
+        <label class="btn btn-ghost btn-sm" style="cursor:pointer">Загрузить<input type="file" accept="image/*" style="display:none" onchange="uploadCoinImage(this)"></label>
+        ${hasImg ? `<button class="btn btn-ghost btn-sm" onclick="clearCoinImage()">Убрать</button>` : ''}
+      </div>
     </div>
   </div>`;
 
@@ -5483,7 +5547,7 @@ function renderOverview() {
 
   // coins card
   const coinBal = coinBalance();
-  const coinsCard = card('coins', '◆ Монеты',
+  const coinsCard = card('coins', (coinImage()?`<img src="${coinImage()}" class="coin-img" style="width:16px;height:16px;vertical-align:-3px"> Монеты`:'🪙 Монеты'),
     `<div class="ov-big" style="color:${coinBal<0?'var(--rose)':'var(--amber)'}">${coinBal}</div><div class="ov-note">${coinBal<0?'в минусе — удовольствие в долг ⚠':'монет на балансе'}</div>`);
 
   // assemble cards respecting visibility settings
