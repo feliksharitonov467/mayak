@@ -349,10 +349,22 @@
   .finmetric-opt input { width: auto; }
 
   /* ---------- Coins / Gamification ---------- */
-  .coin-hero { background: linear-gradient(135deg, rgba(246,179,75,.14), rgba(246,179,75,.03)); border: 1px solid var(--amber-soft); border-radius: var(--radius); padding: 22px; margin-bottom: 16px; text-align: center; }
+  .coin-hero { background: linear-gradient(135deg, rgba(246,179,75,.14), rgba(246,179,75,.03)); border: 1px solid var(--amber-soft); border-radius: var(--radius); padding: 28px 22px 26px; margin-bottom: 16px; text-align: center; }
   .coin-hero.neg { background: linear-gradient(135deg, rgba(240,120,138,.14), rgba(240,120,138,.03)); border-color: var(--rose); }
-  .coin-bal { font-family: Georgia, serif; font-size: 46px; line-height: 1; color: var(--amber); }
-  .coin-hero.neg .coin-bal { color: var(--rose); }
+  .coin-big-wrap { position: relative; display: flex; justify-content: center; align-items: center; height: 150px; }
+  .coin-big { position: relative; background: none; border: none; cursor: pointer; padding: 0; width: 130px; height: 130px; display: flex; align-items: center; justify-content: center; animation: coinFloat 3s ease-in-out infinite; -webkit-tap-highlight-color: transparent; }
+  .coin-big .coin-img { width: 120px !important; height: 120px !important; border-radius: 50%; filter: drop-shadow(0 8px 20px rgba(246,179,75,.45)); }
+  .coin-big .coin-sym { font-size: 108px; line-height: 1; filter: drop-shadow(0 8px 20px rgba(246,179,75,.45)); }
+  .coin-glow { position: absolute; inset: -14px; border-radius: 50%; background: radial-gradient(circle, rgba(246,179,75,.5), transparent 68%); z-index: -1; animation: coinPulse 3s ease-in-out infinite; }
+  .coin-hero.neg .coin-glow { background: radial-gradient(circle, rgba(240,120,138,.45), transparent 68%); }
+  @keyframes coinFloat { 0%,100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-10px) rotate(2deg); } }
+  @keyframes coinPulse { 0%,100% { opacity: .55; transform: scale(1); } 50% { opacity: .9; transform: scale(1.08); } }
+  .coin-big.tapped { animation: coinTap .42s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes coinTap { 0% { transform: scale(1); } 30% { transform: scale(.82) rotate(-6deg); } 60% { transform: scale(1.12) rotate(4deg); } 100% { transform: scale(1) rotate(0); } }
+  .coin-spark { position: absolute; left: 50%; top: 50%; width: 8px; height: 8px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 8px var(--amber); pointer-events: none; animation: sparkFly .6s ease-out forwards; }
+  @keyframes sparkFly { 0% { transform: translate(-50%,-50%) scale(1); opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0); opacity: 0; } }
+  .coin-bal-num { font-family: Georgia, serif; font-size: 52px; line-height: 1; color: var(--amber); margin-top: 6px; font-weight: 700; }
+  .coin-bal-num.neg { color: var(--rose); }
   .coin-bal-l { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
   .coin-warn { font-size: 12.5px; color: var(--rose); margin-top: 12px; max-width: 420px; margin-left: auto; margin-right: auto; }
   .coin-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-bottom: 20px; }
@@ -422,7 +434,6 @@
   .coin-img { border-radius: 50%; object-fit: cover; vertical-align: middle; display: inline-block; }
   .coin-upload { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); flex-wrap: wrap; }
   .coin-upload-left { display: flex; align-items: center; gap: 10px; }
-  .coin-bal .coin-img { width: 38px; height: 38px; vertical-align: -6px; }
   .coin-preview-row { display: flex; align-items: center; gap: 14px; }
   .coin-preview { width: 56px; height: 56px; display: flex; align-items: center; justify-content: center; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 14px; font-size: 30px; }
 
@@ -3425,6 +3436,25 @@ function uploadCoinImage(input){
   reader.readAsDataURL(file);
 }
 function clearCoinImage(){ useDefaultCoin(); }
+// playful tap feedback on the big coin (bounce + sparkles), purely visual
+function tapCoin(ev){
+  const btn = document.getElementById('coin-big-btn');
+  if(!btn) return;
+  btn.classList.remove('tapped'); void btn.offsetWidth; btn.classList.add('tapped');
+  // sparkle burst
+  const wrap = btn.parentElement;
+  const n = 6;
+  for(let i=0;i<n;i++){
+    const s = document.createElement('span');
+    s.className = 'coin-spark';
+    const ang = (Math.PI*2/n)*i + Math.random()*0.5;
+    const dist = 46 + Math.random()*22;
+    s.style.setProperty('--dx', Math.cos(ang)*dist+'px');
+    s.style.setProperty('--dy', Math.sin(ang)*dist+'px');
+    wrap.appendChild(s);
+    setTimeout(()=>s.remove(), 620);
+  }
+}
 // render the coin-design controls inside Settings
 function renderCoinDesign(){
   const box = document.getElementById('coin-design-body');
@@ -3625,11 +3655,15 @@ function renderCoins(){
   const monthS = coinStats(tk.slice(0,8)+'01');
   const allS = coinStats(null);
 
-  // balance hero
-  const sym = coinSymbol();
-  const hasImg = !!coinImage();
+  // balance hero — big, lively coin like a tap game
   const hero = `<div class="coin-hero ${negative?'neg':''}">
-    <div class="coin-bal">${coinIcon(38)} ${bal}</div>
+    <div class="coin-big-wrap">
+      <button class="coin-big" id="coin-big-btn" onclick="tapCoin(event)">
+        ${coinIcon(120)}
+        <span class="coin-glow"></span>
+      </button>
+    </div>
+    <div class="coin-bal-num ${negative?'neg':''}" id="coin-bal-num">${bal}</div>
     <div class="coin-bal-l">${negative?'баланс в минусе — удовольствие в долг ⚠':'монет на балансе'}</div>
     ${negative?`<div class="coin-warn">Ты взял удовольствий больше, чем заработал. Верни баланс в плюс дисциплиной.</div>`:''}
   </div>`;
