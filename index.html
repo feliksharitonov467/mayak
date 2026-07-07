@@ -867,7 +867,6 @@
 
   /* mobile nav */
   .mobile-tabs { display: none; }
-  .more-sheet-bg { display: none; }
 
   /* ---------- Login ---------- */
   #login-screen {
@@ -936,34 +935,20 @@
     .mobile-tabs {
       display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 30;
       background: rgba(14,23,38,.97); backdrop-filter: blur(12px); border-top: 1px solid var(--line);
+      overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none;
       padding-bottom: env(safe-area-inset-bottom, 0);
     }
+    .mobile-tabs::-webkit-scrollbar { display: none; }
     .mobile-tabs button {
-      flex: 1; background: none; border: none; color: var(--text-faint); padding: 10px 4px 12px;
-      font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; font-family: inherit;
-      min-height: 56px; justify-content: center;
+      flex: 1 0 auto; min-width: 62px; background: none; border: none; color: var(--text-faint); padding: 9px 6px 12px;
+      font-size: 9.5px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; font-family: inherit;
     }
-    .mobile-tabs button .ic { font-size: 20px; }
+    .mobile-tabs button .ic { font-size: 18px; }
     .mobile-tabs button.active { color: var(--amber); }
     .topbar .clock { display: none; }
-
-    /* "More" bottom sheet */
-    .more-sheet-bg { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.5); backdrop-filter: blur(3px); display: none; align-items: flex-end; }
-    .more-sheet-bg.open { display: flex; }
-    .more-sheet { width: 100%; background: var(--panel); border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 12px 18px calc(24px + env(safe-area-inset-bottom, 0)); border: 1px solid var(--line); border-bottom: none; max-height: 80vh; overflow-y: auto; animation: sheetup .22s ease; }
-    @keyframes sheetup { from { transform: translateY(100%); } to { transform: translateY(0); } }
-    .more-sheet-handle { width: 40px; height: 4px; border-radius: 99px; background: var(--line); margin: 0 auto 14px; }
-    .more-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
-    .more-grid button {
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;
-      background: var(--ink-soft); border: 1px solid var(--line); border-radius: 12px; color: var(--text-dim);
-      padding: 16px 8px; font-size: 12px; font-family: inherit; cursor: pointer; min-height: 74px;
-    }
-    .more-grid button .ic { font-size: 22px; }
-    .more-grid button.active { border-color: var(--amber); color: var(--amber); background: var(--panel-2); }
   }
   @media (min-width: 821px){
-    .more-sheet-bg { display: none !important; }
+    .mobile-tabs { display: none; }
   }
   .secord-list { display: flex; flex-direction: column; gap: 6px; }
   .secord-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
@@ -1030,21 +1015,21 @@
 
 <div class="layout">
   <nav class="side">
-    <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
+    <button data-view="overview" class="active"><span class="ic">🏠</span> Обзор</button>
     <button data-view="calendar"><span class="ic">📅</span> Календарь</button>
-    <button data-view="projects"><span class="ic">▤</span> Проекты</button>
-    <button data-view="dreams"><span class="ic">✧</span> Мечты</button>
-    <button data-view="habits"><span class="ic">✦</span> Привычки</button>
-    <button data-view="journal"><span class="ic">☺</span> Дневник</button>
+    <button data-view="projects"><span class="ic">📁</span> Проекты</button>
+    <button data-view="dreams"><span class="ic">✨</span> Мечты</button>
+    <button data-view="habits"><span class="ic">🔁</span> Привычки</button>
+    <button data-view="journal"><span class="ic">📔</span> Дневник</button>
     <button data-view="wins"><span class="ic">🏆</span> Победы</button>
-    <button data-view="finance"><span class="ic">₽</span> Финансы</button>
-    <button data-view="coins"><span class="ic">◆</span> Монеты</button>
-    <button data-view="meals"><span class="ic">🍽</span> Питание</button>
-    <button data-view="wheel"><span class="ic">◍</span> Колесо</button>
-    <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
-    <button data-view="dump"><span class="ic">🗑</span> Ведро</button>
+    <button data-view="finance"><span class="ic">💰</span> Финансы</button>
+    <button data-view="coins"><span class="ic">🪙</span> Монеты</button>
+    <button data-view="meals"><span class="ic">🍽️</span> Питание</button>
+    <button data-view="wheel"><span class="ic">🎡</span> Колесо</button>
+    <button data-view="tasks"><span class="ic">✅</span> Задачи</button>
+    <button data-view="dump"><span class="ic">🗑️</span> Ведро</button>
     <div class="navlabel">Данные</div>
-    <button data-view="settings"><span class="ic">⚙</span> Настройки</button>
+    <button data-view="settings"><span class="ic">⚙️</span> Настройки</button>
     <button data-action="export"><span class="ic">⇩</span> Сохранить копию</button>
     <button data-action="import"><span class="ic">⇧</span> Загрузить копию</button>
   </nav>
@@ -1386,36 +1371,7 @@
   </main>
 </div>
 
-<nav class="mobile-tabs">
-  <button data-view="overview" class="active"><span class="ic">◉</span> Обзор</button>
-  <button data-view="calendar"><span class="ic">📅</span> Календарь</button>
-  <button data-view="tasks"><span class="ic">▦</span> Задачи</button>
-  <button data-view="finance"><span class="ic">₽</span> Финансы</button>
-  <button class="mt-more" onclick="openMoreSheet()"><span class="ic">☰</span> Ещё</button>
-</nav>
-
-<!-- Mobile "more" sheet -->
-<div class="more-sheet-bg" id="more-sheet" onclick="if(event.target===this)closeMoreSheet()">
-  <div class="more-sheet">
-    <div class="more-sheet-handle"></div>
-    <h3 class="display" style="margin-bottom:14px">Все разделы</h3>
-    <div class="more-grid">
-      <button data-view="overview" onclick="moreGo('overview')"><span class="ic">◉</span> Обзор</button>
-      <button data-view="calendar" onclick="moreGo('calendar')"><span class="ic">📅</span> Календарь</button>
-      <button data-view="projects" onclick="moreGo('projects')"><span class="ic">▤</span> Проекты</button>
-      <button data-view="dreams" onclick="moreGo('dreams')"><span class="ic">✧</span> Мечты</button>
-      <button data-view="habits" onclick="moreGo('habits')"><span class="ic">✦</span> Привычки</button>
-      <button data-view="journal" onclick="moreGo('journal')"><span class="ic">☺</span> Дневник</button>
-      <button data-view="wins" onclick="moreGo('wins')"><span class="ic">🏆</span> Победы</button>
-      <button data-view="finance" onclick="moreGo('finance')"><span class="ic">₽</span> Финансы</button>
-      <button data-view="coins" onclick="moreGo('coins')"><span class="ic">◆</span> Монеты</button>
-      <button data-view="meals" onclick="moreGo('meals')"><span class="ic">🍽</span> Питание</button>
-      <button data-view="wheel" onclick="moreGo('wheel')"><span class="ic">◍</span> Колесо</button>
-      <button data-view="tasks" onclick="moreGo('tasks')"><span class="ic">▦</span> Задачи</button>
-      <button data-view="dump" onclick="moreGo('dump')"><span class="ic">🗑</span> Ведро</button>
-    </div>
-  </div>
-</div>
+<nav class="mobile-tabs" id="mobile-tabs"></nav>
 </div><!-- /app-wrap -->
 
 <!-- Project modal -->
@@ -1990,12 +1946,6 @@ function switchView(v) {
   const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v === 'journalStats' ? 'journal' : v === 'achievements' ? 'coins' : v;
   document.querySelectorAll('nav.side button[data-view], .mobile-tabs button[data-view]').forEach(b =>
     b.classList.toggle('active', b.dataset.view === navMatch));
-  // mobile "Ещё" is active when the current section isn't one of the 4 primary bottom tabs
-  const primaryTabs = ['overview','calendar','tasks','finance'];
-  const moreBtn = document.querySelector('.mobile-tabs .mt-more');
-  if(moreBtn) moreBtn.classList.toggle('active', !primaryTabs.includes(navMatch));
-  // sync selection highlight inside the sheet
-  document.querySelectorAll('.more-grid button[data-view]').forEach(b=>b.classList.toggle('active', b.dataset.view===navMatch));
   if (v === 'overview') renderOverview();
   if (v === 'logbook') renderLogbook();
   if (v === 'tasks') renderTasks();
@@ -2013,12 +1963,8 @@ function switchView(v) {
   if (v === 'calendar') { calAnchor=null; selectedCalDay=todayKey(); renderCalendar(); }
   if (v === 'journalStats') renderJournalStats();
   if (v === 'settings') renderSettings();
-  closeMoreSheet();
   window.scrollTo(0,0);
 }
-function openMoreSheet(){ document.getElementById('more-sheet').classList.add('open'); }
-function closeMoreSheet(){ const s=document.getElementById('more-sheet'); if(s) s.classList.remove('open'); }
-function moreGo(v){ switchView(v); } // data-view also fires switchView; this keeps intent explicit
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
 document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => {
   if (b.dataset.action === 'export') exportData();
@@ -2632,19 +2578,19 @@ function setTimezone(tz){
 /* ---- Interface customization (section order/hide + overview cards) ---- */
 // canonical nav sections (id must match data-view + view-<id>)
 const NAV_SECTIONS = [
-  {id:'overview', ic:'◉', label:'Обзор', fixed:true},
+  {id:'overview', ic:'🏠', label:'Обзор', fixed:true},
   {id:'calendar', ic:'📅', label:'Календарь'},
-  {id:'projects', ic:'▤', label:'Проекты'},
-  {id:'dreams', ic:'✧', label:'Мечты'},
-  {id:'habits', ic:'✦', label:'Привычки'},
-  {id:'journal', ic:'☺', label:'Дневник'},
+  {id:'projects', ic:'📁', label:'Проекты'},
+  {id:'dreams', ic:'✨', label:'Мечты'},
+  {id:'habits', ic:'🔁', label:'Привычки'},
+  {id:'journal', ic:'📔', label:'Дневник'},
   {id:'wins', ic:'🏆', label:'Победы'},
-  {id:'finance', ic:'₽', label:'Финансы'},
-  {id:'coins', ic:'◆', label:'Монеты'},
-  {id:'meals', ic:'🍽', label:'Питание'},
-  {id:'wheel', ic:'◍', label:'Колесо'},
-  {id:'tasks', ic:'▦', label:'Задачи'},
-  {id:'dump', ic:'🗑', label:'Ведро'},
+  {id:'finance', ic:'💰', label:'Финансы'},
+  {id:'coins', ic:'🪙', label:'Монеты'},
+  {id:'meals', ic:'🍽️', label:'Питание'},
+  {id:'wheel', ic:'🎡', label:'Колесо'},
+  {id:'tasks', ic:'✅', label:'Задачи'},
+  {id:'dump', ic:'🗑️', label:'Ведро'},
 ];
 function uiSettings(){ return data.settings.ui; }
 // ordered, non-hidden section list actually shown in the sidebar
@@ -2656,30 +2602,34 @@ function orderedSections(){
   known.forEach(id=>{ if(!ids.includes(id)) ids.push(id); });
   return ids.map(id=>NAV_SECTIONS.find(s=>s.id===id));
 }
-// rebuild the desktop sidebar and mobile "more" grid from settings
+// rebuild the desktop sidebar and mobile bottom strip from settings
 function applyNavCustomization(){
   const hidden = uiSettings().hidden||[];
-  const side = document.querySelector('nav.side');
-  if(!side) return;
-  // preserve the Settings button (data-view="settings") which lives at the bottom
   const secs = orderedSections().filter(s=> s.fixed || !hidden.includes(s.id));
-  const navHtml = secs.map(s=>`<button data-view="${s.id}" class="${document.getElementById('view-'+s.id)&&document.getElementById('view-'+s.id).classList.contains('active')?'active':''}"><span class="ic">${s.ic}</span> ${s.label}</button>`).join('');
-  // keep everything from the settings divider onward intact
-  const divider = side.querySelector('.side-sep, .nav-sep, hr');
-  // simplest robust approach: replace only the data-view buttons that are section nav (not settings)
-  side.querySelectorAll('button[data-view]').forEach(b=>{ if(b.dataset.view!=='settings') b.remove(); });
-  // insert new buttons at the top, before the first non-section element
-  const firstChild = side.firstChild;
-  const wrap = document.createElement('div'); wrap.innerHTML = navHtml;
-  Array.from(wrap.children).reverse().forEach(btn=>{
-    btn.onclick = ()=>switchView(btn.dataset.view);
-    side.insertBefore(btn, side.firstChild);
-  });
-  // rebuild mobile more-grid too
-  const grid = document.querySelector('.more-grid');
-  if(grid){
-    grid.innerHTML = orderedSections().filter(s=>s.fixed || !hidden.includes(s.id))
-      .map(s=>`<button data-view="${s.id}" onclick="moreGo('${s.id}')"><span class="ic">${s.ic}</span> ${s.label}</button>`).join('');
+  const activeView = (document.querySelector('.view.active')||{}).id || 'view-overview';
+
+  // ----- desktop sidebar -----
+  const side = document.querySelector('nav.side');
+  if(side){
+    side.querySelectorAll('button[data-view]').forEach(b=>{ if(b.dataset.view!=='settings') b.remove(); });
+    const wrap = document.createElement('div');
+    wrap.innerHTML = secs.map(s=>`<button data-view="${s.id}"><span class="ic">${s.ic}</span> ${s.label}</button>`).join('');
+    Array.from(wrap.children).reverse().forEach(btn=>{
+      btn.onclick = ()=>switchView(btn.dataset.view);
+      if('view-'+btn.dataset.view===activeView) btn.classList.add('active');
+      side.insertBefore(btn, side.firstChild);
+    });
+  }
+
+  // ----- mobile bottom strip (scrollable, all sections + settings) -----
+  const strip = document.getElementById('mobile-tabs');
+  if(strip){
+    const stripSecs = secs.concat([{id:'settings', ic:'⚙️', label:'Настройки'}]);
+    strip.innerHTML = stripSecs.map(s=>`<button data-view="${s.id}"><span class="ic">${s.ic}</span> ${s.label}</button>`).join('');
+    strip.querySelectorAll('button[data-view]').forEach(btn=>{
+      btn.onclick = ()=>switchView(btn.dataset.view);
+      if('view-'+btn.dataset.view===activeView) btn.classList.add('active');
+    });
   }
 }
 function renderSectionOrderList(){
