@@ -1056,6 +1056,7 @@
     <button data-view="wins"><span class="ic">🏆</span> Победы</button>
     <button data-view="finance"><span class="ic">💰</span> Финансы</button>
     <button data-view="coins"><span class="ic">🪙</span> Монеты</button>
+    <button data-view="achievements"><span class="ic">🏅</span> Достижения</button>
     <button data-view="meals"><span class="ic">🍽️</span> Питание</button>
     <button data-view="wheel"><span class="ic">🎡</span> Колесо</button>
     <button data-view="tasks"><span class="ic">✅</span> Задачи</button>
@@ -1258,7 +1259,8 @@
           <p>Копи прогресс и забирай награды монетами</p>
         </div>
         <div class="spacer"></div>
-        <button class="btn btn-ghost" onclick="switchView('coins')">← К монетам</button>
+        <button class="btn btn-ghost" onclick="openAchImport()">⇧ Импорт</button>
+        <button class="btn btn-primary" onclick="openAchModal()">+ Своё</button>
       </div>
       <div id="achievements-body"></div>
     </section>
@@ -1981,6 +1983,7 @@ window.onAuthChange = async function(user) {
       if (!data.coins.achievements || typeof data.coins.achievements !== 'object') data.coins.achievements = {};
       if (!Array.isArray(data.coins.customAchievements)) data.coins.customAchievements = [];
       if (!data.coins.achProgress || typeof data.coins.achProgress !== 'object') data.coins.achProgress = {};
+      if (!data.coins.achOverrides || typeof data.coins.achOverrides !== 'object') data.coins.achOverrides = {};
       if (typeof data.coins.symbol !== 'string' || !data.coins.symbol) data.coins.symbol = '🪙';
       if (typeof data.coins.image !== 'string') data.coins.image = '';
       // default to the built-in Cheburashka coin unless the user already customized
@@ -2036,7 +2039,7 @@ document.addEventListener('DOMContentLoaded', () => {
 /* ============ NAV ============ */
 function switchView(v) {
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-'+v));
-  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v === 'journalStats' ? 'journal' : v === 'achievements' ? 'coins' : v;
+  const navMatch = v === 'logbook' ? 'tasks' : v === 'wheelArchive' ? 'wheel' : v === 'projectArchive' ? 'projects' : v === 'journalStats' ? 'journal' : v;
   document.querySelectorAll('nav.side button[data-view], .mobile-tabs button[data-view]').forEach(b =>
     b.classList.toggle('active', b.dataset.view === navMatch));
   if (v === 'overview') renderOverview();
@@ -2681,6 +2684,7 @@ const NAV_SECTIONS = [
   {id:'wins', ic:'🏆', label:'Победы'},
   {id:'finance', ic:'💰', label:'Финансы'},
   {id:'coins', ic:'🪙', label:'Монеты'},
+  {id:'achievements', ic:'🏅', label:'Достижения'},
   {id:'meals', ic:'🍽️', label:'Питание'},
   {id:'wheel', ic:'🎡', label:'Колесо'},
   {id:'tasks', ic:'✅', label:'Задачи'},
@@ -3755,8 +3759,12 @@ const ACH_METRICS = {
   mealDays:    { label:'Дней с планом питания', fn:()=> Object.keys(data.meals.plan).filter(k=>MEAL_TYPES.some(m=>(data.meals.plan[k][m.id]||[]).length)).length },
   manual:      { label:'Ручной счётчик (жми +1)', fn:(a)=> data.coins.achProgress[a.id]||0 },
 };
-// all achievements = built-in + custom
-function allAchievements(){ return ACHIEVEMENTS.concat(data.coins.customAchievements||[]); }
+// all achievements = built-in (with user overrides applied) + custom
+function allAchievements(){
+  const ov = (data.coins.achOverrides)||{};
+  const builtins = ACHIEVEMENTS.map(a=> ov[a.id] ? {...a, ...ov[a.id]} : a);
+  return builtins.concat(data.coins.customAchievements||[]);
+}
 function achCur(a){
   const m = ACH_METRICS[a.metric] || ACH_METRICS.manual;
   try { return Math.max(0, m.fn(a)||0); }
@@ -3790,23 +3798,30 @@ function achievementsSummary(){
 }
 function openAchievements(){ switchView('achievements'); }
 
-// custom achievement create/edit
+// achievement create/edit — works for custom AND built-in (built-ins saved as overrides)
 let editingAchId = null;
 function openAchModal(id){
   editingAchId = id||null;
   const metricSel = document.getElementById('ach-metric');
   metricSel.innerHTML = Object.entries(ACH_METRICS).map(([k,v])=>`<option value="${k}">${v.label}</option>`).join('');
+  const metricField = document.getElementById('ach-metric').closest('.fld');
   if(id){
-    const a = (data.coins.customAchievements||[]).find(x=>x.id===id);
+    // find in the merged list (built-in with overrides applied, or custom)
+    const a = allAchievements().find(x=>x.id===id);
     if(!a) return;
-    document.getElementById('ach-modal-title').textContent = 'Изменить достижение';
+    const isCustom = String(id).startsWith('custom_');
+    document.getElementById('ach-modal-title').textContent = isCustom ? 'Изменить достижение' : 'Изменить (встроенное)';
     document.getElementById('ach-icon').value = a.icon||'';
     document.getElementById('ach-title').value = a.title||'';
     document.getElementById('ach-desc').value = a.desc||'';
     document.getElementById('ach-goal').value = a.goal||1;
     document.getElementById('ach-reward').value = a.reward||0;
     metricSel.value = a.metric||'manual';
+    // built-in achievements keep their progress source — hide the metric selector for them
+    if(metricField) metricField.style.display = isCustom ? '' : 'none';
+    // built-ins can be reset (override removed) instead of deleted
     document.getElementById('ach-delete').style.display='';
+    document.getElementById('ach-delete').textContent = isCustom ? 'Удалить' : 'Сбросить';
   } else {
     document.getElementById('ach-modal-title').textContent = 'Своё достижение';
     document.getElementById('ach-icon').value = '🎯';
@@ -3815,6 +3830,7 @@ function openAchModal(id){
     document.getElementById('ach-goal').value = 1;
     document.getElementById('ach-reward').value = 20;
     metricSel.value = 'manual';
+    if(metricField) metricField.style.display = '';
     document.getElementById('ach-delete').style.display='none';
   }
   document.getElementById('ach-modal').classList.add('open');
@@ -3829,8 +3845,13 @@ function saveAch(){
   const reward = Math.max(0, parseInt(document.getElementById('ach-reward').value,10)||0);
   const metric = document.getElementById('ach-metric').value;
   if(editingAchId){
-    const a = data.coins.customAchievements.find(x=>x.id===editingAchId);
-    Object.assign(a, {icon,title,desc,goal,reward,metric});
+    if(String(editingAchId).startsWith('custom_')){
+      const a = data.coins.customAchievements.find(x=>x.id===editingAchId);
+      if(a) Object.assign(a, {icon,title,desc,goal,reward,metric});
+    } else {
+      // built-in: store an override (metric stays the built-in one)
+      data.coins.achOverrides[editingAchId] = { icon, title, desc, goal, reward };
+    }
   } else {
     data.coins.customAchievements.push({ id:'custom_'+uid(), icon, title, desc, goal, reward, metric });
   }
@@ -3839,10 +3860,16 @@ function saveAch(){
 }
 function deleteAchFromModal(){
   if(!editingAchId) return;
-  if(!confirm('Удалить это достижение?')) return;
-  data.coins.customAchievements = data.coins.customAchievements.filter(a=>a.id!==editingAchId);
-  delete data.coins.achievements[editingAchId];
-  delete data.coins.achProgress[editingAchId];
+  const isCustom = String(editingAchId).startsWith('custom_');
+  if(isCustom){
+    if(!confirm('Удалить это достижение?')) return;
+    data.coins.customAchievements = data.coins.customAchievements.filter(a=>a.id!==editingAchId);
+    delete data.coins.achievements[editingAchId];
+    delete data.coins.achProgress[editingAchId];
+  } else {
+    if(!confirm('Сбросить к стандартному виду?')) return;
+    delete data.coins.achOverrides[editingAchId];
+  }
   save(); closeModal('ach-modal'); renderAchievements();
 }
 
@@ -3910,7 +3937,7 @@ function renderAchievements(){
       return `<div class="ach-card ${cls}">
         <div class="ach-icon">${a.icon}</div>
         <div class="ach-main">
-          <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''}${isCustom?` <span class="ach-edit" onclick="openAchModal('${a.id}')">✎</span>`:''}</div>
+          <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''} <span class="ach-edit" onclick="openAchModal('${a.id}')">✎</span></div>
           <div class="ach-desc">${esc(a.desc||'')}</div>
           <div class="ach-bar"><i style="width:${st.pct}%"></i></div>
         </div>
