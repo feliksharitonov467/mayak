@@ -3759,7 +3759,8 @@ const ACH_METRICS = {
 function allAchievements(){ return ACHIEVEMENTS.concat(data.coins.customAchievements||[]); }
 function achCur(a){
   const m = ACH_METRICS[a.metric] || ACH_METRICS.manual;
-  return Math.max(0, m.fn(a)||0);
+  try { return Math.max(0, m.fn(a)||0); }
+  catch(_) { return 0; }
 }
 function achState(a){
   const cur = achCur(a);
@@ -3882,61 +3883,71 @@ function confirmAchImport(){
 function renderAchievements(){
   const box = document.getElementById('achievements-body');
   if(!box) return;
-  const sum = achievementsSummary();
-  const sym = coinSymbol();
-  // active achievements (not yet claimed)
-  const active = allAchievements().filter(a=>!achState(a).claimed);
-  const rows = active.length ? active.map(a=>{
-    const st = achState(a);
-    const isCustom = a.id.startsWith('custom_');
-    const isManual = a.metric==='manual';
-    const cls = st.done ? 'done' : 'locked';
-    let action;
-    if(st.done){
-      action = `<button class="btn btn-primary btn-sm" onclick="claimAchievement('${a.id}')">Забрать +${a.reward} ${sym}</button>`;
-    } else if(isManual){
-      action = `<div class="ach-manual"><button class="icon-btn" onclick="achBump('${a.id}',-1)">−</button><span class="ach-prog-n">${st.rawCur}/${a.goal}</span><button class="icon-btn" onclick="achBump('${a.id}',1)">+</button></div>`;
-    } else {
-      action = `<span class="ach-prog-n">${st.rawCur} / ${a.goal}</span>`;
-    }
-    return `<div class="ach-card ${cls}">
-      <div class="ach-icon">${a.icon}</div>
-      <div class="ach-main">
-        <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''}${isCustom?` <span class="ach-edit" onclick="openAchModal('${a.id}')">✎</span>`:''}</div>
-        <div class="ach-desc">${esc(a.desc||'')}</div>
-        <div class="ach-bar"><i style="width:${st.pct}%"></i></div>
-      </div>
-      <div class="ach-action">${action}</div>
-    </div>`;
-  }).join('') : `<div class="wf-none">Активных достижений нет. Создай своё или импортируй.</div>`;
-
-  // journal of claimed achievements (moved out of the active list)
-  const claimedList = Object.entries(data.coins.achievements)
-    .map(([id,rec])=>({id, ...rec}))
-    .sort((a,b)=>(b.at||0)-(a.at||0));
-  const journalHtml = claimedList.length ? claimedList.map(rec=>{
-    const dl = rec.at ? new Date(rec.at).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}) : '';
-    return `<div class="ach-journal-row">
-      <span class="ach-journal-check">🏅</span>
-      <span class="ach-journal-title">${esc(rec.title||id)}</span>
-      <span class="ach-journal-meta">+${rec.reward||0} ${sym} · ${dl}</span>
-    </div>`;
-  }).join('') : `<div class="wf-none" style="padding:12px 0">Пока ничего не получено. Выполняй достижения — они уедут сюда.</div>`;
-
-  box.innerHTML = `
-    <div class="ach-head-row">
-      <div class="ach-summary">Активных: <b>${sum.active}</b>${sum.ready?` · готово забрать: <b style="color:var(--amber)">${sum.ready}</b>`:''} · получено: <b>${sum.claimed}</b></div>
+  const headRow = `<div class="ach-head-row">
+      <div class="ach-summary" id="ach-summary-line">Достижения</div>
       <div style="display:flex;gap:8px">
         <button class="btn btn-ghost btn-sm" onclick="openAchImport()">⇧ Импорт</button>
         <button class="btn btn-primary btn-sm" onclick="openAchModal()">+ Своё</button>
       </div>
-    </div>
-    <div class="ach-list">${rows}</div>
-    <div class="chart-wrap" style="margin-top:22px">
-      <h3>🏅 Журнал достижений</h3>
-      <div class="ach-journal">${journalHtml}</div>
-    </div>
-  `;
+    </div>`;
+  try {
+    const sum = achievementsSummary();
+    const sym = coinSymbol();
+    const active = allAchievements().filter(a=>!achState(a).claimed);
+    const rows = active.length ? active.map(a=>{
+      const st = achState(a);
+      const isCustom = String(a.id).startsWith('custom_');
+      const isManual = a.metric==='manual';
+      const cls = st.done ? 'done' : 'locked';
+      let action;
+      if(st.done){
+        action = `<button class="btn btn-primary btn-sm" onclick="claimAchievement('${a.id}')">Забрать +${a.reward} ${sym}</button>`;
+      } else if(isManual){
+        action = `<div class="ach-manual"><button class="icon-btn" onclick="achBump('${a.id}',-1)">−</button><span class="ach-prog-n">${st.rawCur}/${a.goal}</span><button class="icon-btn" onclick="achBump('${a.id}',1)">+</button></div>`;
+      } else {
+        action = `<span class="ach-prog-n">${st.rawCur} / ${a.goal}</span>`;
+      }
+      return `<div class="ach-card ${cls}">
+        <div class="ach-icon">${a.icon}</div>
+        <div class="ach-main">
+          <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''}${isCustom?` <span class="ach-edit" onclick="openAchModal('${a.id}')">✎</span>`:''}</div>
+          <div class="ach-desc">${esc(a.desc||'')}</div>
+          <div class="ach-bar"><i style="width:${st.pct}%"></i></div>
+        </div>
+        <div class="ach-action">${action}</div>
+      </div>`;
+    }).join('') : `<div class="wf-none">Активных достижений нет. Создай своё или импортируй.</div>`;
+
+    const claimedList = Object.entries(data.coins.achievements||{})
+      .map(([id,rec])=>({id, ...rec}))
+      .sort((a,b)=>(b.at||0)-(a.at||0));
+    const journalHtml = claimedList.length ? claimedList.map(rec=>{
+      const dl = rec.at ? new Date(rec.at).toLocaleDateString('ru-RU',{day:'numeric',month:'short',year:'numeric'}) : '';
+      return `<div class="ach-journal-row">
+        <span class="ach-journal-check">🏅</span>
+        <span class="ach-journal-title">${esc(rec.title||rec.id)}</span>
+        <span class="ach-journal-meta">+${rec.reward||0} ${sym} · ${dl}</span>
+      </div>`;
+    }).join('') : `<div class="wf-none" style="padding:12px 0">Пока ничего не получено. Выполняй достижения — они уедут сюда.</div>`;
+
+    box.innerHTML = `
+      <div class="ach-head-row">
+        <div class="ach-summary">Активных: <b>${sum.active}</b>${sum.ready?` · готово забрать: <b style="color:var(--amber)">${sum.ready}</b>`:''} · получено: <b>${sum.claimed}</b></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="openAchImport()">⇧ Импорт</button>
+          <button class="btn btn-primary btn-sm" onclick="openAchModal()">+ Своё</button>
+        </div>
+      </div>
+      <div class="ach-list">${rows}</div>
+      <div class="chart-wrap" style="margin-top:22px">
+        <h3>🏅 Журнал достижений</h3>
+        <div class="ach-journal">${journalHtml}</div>
+      </div>
+    `;
+  } catch(err){
+    // never leave the page blank — show controls + a hint
+    box.innerHTML = headRow + `<div class="wf-none" style="margin-top:14px">Не удалось построить список достижений, но ты можешь создать своё или импортировать. (${esc(String(err.message||err))})</div>`;
+  }
 }
 
 /* ============ MEALS / FOOD PLANNER ============ */
