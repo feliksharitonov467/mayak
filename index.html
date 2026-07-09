@@ -151,7 +151,10 @@
   .icon-btn:hover { background: var(--panel-2); color: var(--text); }
 
   /* ---------- Cards & panels ---------- */
-  .grid { display: grid; gap: 16px; }
+  .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(330px,1fr)); }
+  .proj-folders-wrap { display: flex; flex-direction: column; gap: 28px; }
+  .proj-folder-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 15px; font-weight: 700; color: var(--text-dim); }
+  .proj-folder-head .cnt { font-weight: 400; color: var(--text-faint); font-size: 12.5px; }
   .card {
     background: var(--panel); border: 1px solid var(--line);
     border-radius: var(--radius); padding: 18px;
@@ -1131,10 +1134,11 @@
           <p>Большие цели, разбитые на этапы</p>
         </div>
         <div class="spacer"></div>
+        <button class="btn btn-ghost" onclick="openFoldersModal()">🗂 Папки</button>
         <button class="btn btn-ghost" onclick="switchView('projectArchive')">✅ Готовые <span id="projarch-count" class="log-badge"></span></button>
         <button class="btn btn-primary" onclick="openProjectModal()">+ Новый проект</button>
       </div>
-      <div class="grid" id="projects-list" style="grid-template-columns: repeat(auto-fill, minmax(330px,1fr));"></div>
+      <div id="projects-list" class="proj-folders-wrap"></div>
     </section>
 
     <!-- PROJECT ARCHIVE -->
@@ -1438,9 +1442,28 @@
     <label class="fld"><span>Сфера колеса (необязательно)</span>
       <select id="pm-sphere"><option value="">— без сферы —</option></select>
     </label>
+    <label class="fld"><span>Папка (необязательно)</span>
+      <select id="pm-folder"><option value="">— без папки —</option></select>
+    </label>
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('project-modal')">Отмена</button>
       <button class="btn btn-primary" id="pm-save" onclick="saveProject()">Создать</button>
+    </div>
+  </div>
+</div>
+
+<!-- Project folders modal -->
+<div class="modal-bg" id="folders-modal">
+  <div class="modal">
+    <h3 class="display">Папки проектов</h3>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px">Группируй проекты по папкам — переименовать проект в другую папку можно через карандаш ✎.</p>
+    <div id="folders-list" class="fincat-list"></div>
+    <div class="win-custom">
+      <input type="text" id="folder-input" placeholder="Название папки" onkeydown="if(event.key==='Enter'){addProjectFolder(this);}">
+      <button class="btn btn-ghost btn-sm" onclick="addProjectFolder(document.getElementById('folder-input'))">Добавить</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('folders-modal')">Готово</button>
     </div>
   </div>
 </div>
@@ -1918,7 +1941,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], projectFolders: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1947,7 +1970,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], projectFolders: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -2010,6 +2033,7 @@ window.onAuthChange = async function(user) {
         });
       }
       if (!Array.isArray(data.projectArchive)) data.projectArchive = [];
+      if (!Array.isArray(data.projectFolders)) data.projectFolders = [];
       if (!Array.isArray(data.dreams)) data.dreams = [];
       if (!data.days || typeof data.days !== 'object' || Array.isArray(data.days)) data.days = {};
       if (!Array.isArray(data.customReasons)) data.customReasons = [];
@@ -2134,7 +2158,7 @@ function toast(msg) {
 /* ============ MODAL ============ */
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 let editingProjectId = null;
-function openProjectModal(preSphereId){
+function openProjectModal(preSphereId, preFolderId){
   editingProjectId = null;
   document.getElementById('pm-title').textContent = 'Новый проект';
   document.getElementById('pm-save').textContent = 'Создать';
@@ -2144,6 +2168,9 @@ function openProjectModal(preSphereId){
   const spheres = data.wheel ? data.wheel.spheres : [];
   sel.innerHTML = '<option value="">— без сферы —</option>' +
     spheres.map(s=>`<option value="${s.id}" ${preSphereId===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+  const fsel = document.getElementById('pm-folder');
+  fsel.innerHTML = '<option value="">— без папки —</option>' +
+    (data.projectFolders||[]).map(f=>`<option value="${f.id}" ${preFolderId===f.id?'selected':''}>${esc(f.name)}</option>`).join('');
   document.getElementById('project-modal').classList.add('open');
   setTimeout(()=>document.getElementById('pm-name').focus(),50);
 }
@@ -2158,6 +2185,8 @@ function editProject(id){
   const spheres = data.wheel ? data.wheel.spheres : [];
   document.getElementById('pm-sphere').innerHTML = '<option value="">— без сферы —</option>' +
     spheres.map(s=>`<option value="${s.id}" ${curSphere&&curSphere.id===s.id?'selected':''}>${esc(s.name)}</option>`).join('');
+  document.getElementById('pm-folder').innerHTML = '<option value="">— без папки —</option>' +
+    (data.projectFolders||[]).map(f=>`<option value="${f.id}" ${p.folderId===f.id?'selected':''}>${esc(f.name)}</option>`).join('');
   document.getElementById('project-modal').classList.add('open');
   setTimeout(()=>document.getElementById('pm-name').focus(),50);
 }
@@ -2170,10 +2199,11 @@ function saveProject() {
   if (!name) { toast('Впиши название'); return; }
   const due = document.getElementById('pm-date').value;
   const sphereId = document.getElementById('pm-sphere').value;
+  const folderId = document.getElementById('pm-folder').value;
 
   if (editingProjectId){
     const p = data.projects.find(x=>x.id===editingProjectId);
-    p.name = name; p.due = due;
+    p.name = name; p.due = due; p.folderId = folderId;
     // update sphere link: unlink from any sphere, then link to the chosen one
     if(data.wheel){
       data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==p.id); });
@@ -2182,7 +2212,7 @@ function saveProject() {
     save(); closeModal('project-modal'); renderProjects(); renderWheel(); renderTasks();
     toast('Проект обновлён');
   } else {
-    const proj = { id: uid(), name, due, milestones: [], created: Date.now() };
+    const proj = { id: uid(), name, due, folderId, milestones: [], created: Date.now() };
     data.projects.push(proj);
     if (sphereId && data.wheel) {
       const s = data.wheel.spheres.find(x=>x.id===sphereId);
@@ -2217,6 +2247,39 @@ function completeProject(id){
   toast('Проект в журнале готовых 🎉');
 }
 function deleteProject(id){ if(confirm('Удалить проект целиком?')){ data.projects = data.projects.filter(p=>p.id!==id); if(data.wheel){ data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==id); }); } save(); renderProjects(); renderWheel(); renderTasks(); } }
+
+// ---- project folders ----
+function openFoldersModal(){ renderFoldersList(); document.getElementById('folders-modal').classList.add('open'); }
+function renderFoldersList(){
+  const box = document.getElementById('folders-list');
+  const folders = data.projectFolders||[];
+  box.innerHTML = folders.map(f=>{
+    const cnt = data.projects.filter(p=>p.folderId===f.id).length;
+    return `<div class="fincat-item">
+      <input class="fincat-name" style="flex:1" value="${esc(f.name)}" onchange="renameProjectFolder('${f.id}', this.value)">
+      <span style="color:var(--text-faint);font-size:12px;margin:0 8px">${cnt} ${plural(cnt,'проект','проекта','проектов')}</span>
+      <span class="x" onclick="removeProjectFolder('${f.id}')" title="Удалить папку">✕</span>
+    </div>`;
+  }).join('') || `<div class="wf-none">Папок нет.</div>`;
+}
+function addProjectFolder(input){
+  const name = input.value.trim(); if(!name) return;
+  data.projectFolders = data.projectFolders||[];
+  data.projectFolders.push({ id: uid(), name, created: Date.now() });
+  input.value=''; save(); renderFoldersList(); renderProjects();
+}
+function renameProjectFolder(id, val){
+  const f = (data.projectFolders||[]).find(x=>x.id===id);
+  const name = val.trim();
+  if(!f || !name){ renderFoldersList(); return; }
+  f.name = name; save(); renderFoldersList(); renderProjects();
+}
+function removeProjectFolder(id){
+  if(!confirm('Удалить папку? Проекты в ней останутся, просто станут «без папки».')) return;
+  data.projectFolders = (data.projectFolders||[]).filter(f=>f.id!==id);
+  data.projects.forEach(p=>{ if(p.folderId===id) p.folderId=''; });
+  save(); renderFoldersList(); renderProjects();
+}
 function addMilestone(pid, input) {
   const txt = input.value.trim(); if(!txt) return;
   const p = data.projects.find(x=>x.id===pid);
@@ -2244,49 +2307,71 @@ function projectSphere(projId){
   return data.wheel.spheres.find(s=>(s.projectIds||[]).includes(projId)) || null;
 }
 
+function projectCardHtml(p){
+  const pct = projectPct(p);
+  const dueTxt = p.due ? `до ${new Date(p.due+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}` : 'без срока';
+  const done = p.milestones.filter(m=>m.done).length;
+  const sph = projectSphere(p.id);
+  const sphTag = sph ? ` · <span style="color:var(--violet)">◍ ${esc(sph.name)}</span>` : '';
+  const doneBanner = (pct===100 && p.milestones.length)
+    ? `<div class="proj-done-banner">
+         <span>🎉 Все этапы выполнены!</span>
+         <button class="btn btn-primary btn-sm" onclick="completeProject('${p.id}')">Отправить в журнал готовых</button>
+       </div>` : '';
+  return `<div class="card">
+    <div class="proj-head">
+      <div class="pct">${pct}<span style="font-size:14px">%</span></div>
+      <div style="flex:1">
+        <h3>${esc(p.name)}</h3>
+        <div class="meta">${done}/${p.milestones.length} этапов · ${dueTxt}${sphTag}</div>
+      </div>
+      <button class="icon-btn" title="Изменить" onclick="editProject('${p.id}')">✎</button>
+      <button class="icon-btn" title="Удалить" onclick="deleteProject('${p.id}')">✕</button>
+    </div>
+    <div class="bar"><i style="width:${pct}%"></i></div>
+    ${doneBanner}
+    <div class="milestones">
+      ${p.milestones.map(m=>`<div class="ms ${m.done?'done':''}">
+        <div class="check" onclick="toggleMilestone('${p.id}','${m.id}')">✓</div>
+        <input class="txt" value="${esc(m.txt)}" onchange="renameMilestone('${p.id}','${m.id}', this.value)">
+        <button class="icon-btn" onclick="delMilestone('${p.id}','${m.id}')">✕</button>
+      </div>`).join('')}
+    </div>
+    <div class="ms-add">
+      <input type="text" placeholder="Добавить этап и нажать Enter" onkeydown="if(event.key==='Enter'){addMilestone('${p.id}',this); this.value='';}">
+    </div>
+  </div>`;
+}
 function renderProjects() {
   const wrap = document.getElementById('projects-list');
   const archBadge = document.getElementById('projarch-count');
   if(archBadge) archBadge.textContent = (data.projectArchive||[]).length || '';
   if (!data.projects.length) {
-    wrap.innerHTML = `<div class="empty" style="grid-column:1/-1"><div class="big">🧭</div><p>Пока нет ни одного проекта.<br>Начни с большой цели и разбей её на шаги.</p><button class="btn btn-primary" onclick="openProjectModal()">+ Создать первый</button></div>`;
+    wrap.innerHTML = `<div class="empty"><div class="big">🧭</div><p>Пока нет ни одного проекта.<br>Начни с большой цели и разбей её на шаги.</p><button class="btn btn-primary" onclick="openProjectModal()">+ Создать первый</button></div>`;
     return;
   }
-  wrap.innerHTML = data.projects.map(p => {
-    const pct = projectPct(p);
-    const dueTxt = p.due ? `до ${new Date(p.due+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'})}` : 'без срока';
-    const done = p.milestones.filter(m=>m.done).length;
-    const sph = projectSphere(p.id);
-    const sphTag = sph ? ` · <span style="color:var(--violet)">◍ ${esc(sph.name)}</span>` : '';
-    const doneBanner = (pct===100 && p.milestones.length)
-      ? `<div class="proj-done-banner">
-           <span>🎉 Все этапы выполнены!</span>
-           <button class="btn btn-primary btn-sm" onclick="completeProject('${p.id}')">Отправить в журнал готовых</button>
-         </div>` : '';
-    return `<div class="card">
-      <div class="proj-head">
-        <div class="pct">${pct}<span style="font-size:14px">%</span></div>
-        <div style="flex:1">
-          <h3>${esc(p.name)}</h3>
-          <div class="meta">${done}/${p.milestones.length} этапов · ${dueTxt}${sphTag}</div>
-        </div>
-        <button class="icon-btn" title="Изменить" onclick="editProject('${p.id}')">✎</button>
-        <button class="icon-btn" title="Удалить" onclick="deleteProject('${p.id}')">✕</button>
-      </div>
-      <div class="bar"><i style="width:${pct}%"></i></div>
-      ${doneBanner}
-      <div class="milestones">
-        ${p.milestones.map(m=>`<div class="ms ${m.done?'done':''}">
-          <div class="check" onclick="toggleMilestone('${p.id}','${m.id}')">✓</div>
-          <input class="txt" value="${esc(m.txt)}" onchange="renameMilestone('${p.id}','${m.id}', this.value)">
-          <button class="icon-btn" onclick="delMilestone('${p.id}','${m.id}')">✕</button>
-        </div>`).join('')}
-      </div>
-      <div class="ms-add">
-        <input type="text" placeholder="Добавить этап и нажать Enter" onkeydown="if(event.key==='Enter'){addMilestone('${p.id}',this); this.value='';}">
-      </div>
+  const folders = data.projectFolders||[];
+  if (!folders.length) {
+    // no folders defined — flat grid, same as before
+    wrap.innerHTML = `<div class="grid">${data.projects.map(projectCardHtml).join('')}</div>`;
+    return;
+  }
+  const sections = folders.map(f=>{
+    const projs = data.projects.filter(p=>p.folderId===f.id);
+    if(!projs.length) return '';
+    return `<div class="proj-folder">
+      <div class="proj-folder-head">🗂 ${esc(f.name)} <span class="cnt">${projs.length} ${plural(projs.length,'проект','проекта','проектов')}</span></div>
+      <div class="grid">${projs.map(projectCardHtml).join('')}</div>
     </div>`;
-  }).join('');
+  });
+  const unfiled = data.projects.filter(p=>!p.folderId || !folders.some(f=>f.id===p.folderId));
+  if (unfiled.length) {
+    sections.push(`<div class="proj-folder">
+      <div class="proj-folder-head">Без папки <span class="cnt">${unfiled.length} ${plural(unfiled.length,'проект','проекта','проектов')}</span></div>
+      <div class="grid">${unfiled.map(projectCardHtml).join('')}</div>
+    </div>`);
+  }
+  wrap.innerHTML = sections.join('');
 }
 
 function renderProjectArchive(){
