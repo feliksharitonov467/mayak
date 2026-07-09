@@ -137,7 +137,13 @@
   .btn-primary:hover { filter: brightness(1.07); }
   .btn-ghost { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
   .btn-ghost:hover { background: var(--panel-2); }
+  .btn-danger { background: var(--rose); color: #2a0a0e; }
+  .btn-danger:hover { filter: brightness(1.07); }
+  .btn-danger:disabled { opacity: .4; cursor: not-allowed; }
   .btn-sm { padding: 6px 11px; font-size: 12.5px; }
+  .fin-select-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 10px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; font-size: 13px; flex-wrap: wrap; }
+  .fin-op-check { flex: none; width: 17px; height: 17px; accent-color: var(--amber); cursor: pointer; }
+  .fin-op.sel { border-color: var(--amber); background: rgba(230,180,80,.08); }
   .icon-btn {
     background: none; border: none; color: var(--text-faint); cursor: pointer;
     font-size: 15px; padding: 5px 7px; border-radius: 7px; transition: .15s; font-family: inherit;
@@ -2920,6 +2926,8 @@ function opsInMonth(mk){ return fin().operations.filter(o=>monthKey(o.date)===(m
 
 // ---- Period filtering ----
 let finPeriod = 'month';            // today|yesterday|week|lastweek|month|lastmonth|all|custom
+let finSelectMode = false;          // bulk-select mode for the operations list
+let finSelectedOps = new Set();     // ids of operations currently selected
 let finCustomFrom = '', finCustomTo = '';
 // Monday-based start of the week containing `key`
 function weekStartKey(key){
@@ -2977,6 +2985,7 @@ function daysBetween(a,b){
 }
 function setFinPeriod(p){
   finPeriod = p;
+  finSelectedOps.clear();
   renderFinance();
 }
 function setFinCustom(which, val){
@@ -3055,6 +3064,34 @@ function deleteOpFromModal(){
   if(!confirm('Удалить операцию?')) return;
   fin().operations = fin().operations.filter(o=>o.id!==editingOpId);
   save(); closeModal('op-modal'); renderFinance();
+}
+
+function toggleFinSelectMode(){
+  finSelectMode = !finSelectMode;
+  finSelectedOps.clear();
+  renderFinance();
+}
+function toggleOpSelect(id){
+  if(finSelectedOps.has(id)) finSelectedOps.delete(id); else finSelectedOps.add(id);
+  renderFinance();
+}
+function finSelectAllOps(){
+  const ids = opsInPeriod().map(o=>o.id);
+  finSelectedOps = new Set(ids);
+  renderFinance();
+}
+function finClearSelection(){
+  finSelectedOps.clear();
+  renderFinance();
+}
+function finDeleteSelected(){
+  if(!finSelectedOps.size) return;
+  if(!confirm(`Удалить выбранные операции (${finSelectedOps.size})? Это нельзя отменить.`)) return;
+  fin().operations = fin().operations.filter(o=>!finSelectedOps.has(o.id));
+  finSelectedOps.clear();
+  finSelectMode = false;
+  save(); renderFinance();
+  toast('Операции удалены');
 }
 
 function openBudgetModal(){
@@ -3310,10 +3347,17 @@ function renderFinance(){
 
   // history — operations within the period, newest first
   const periodOps = ops.slice().sort((a,b)=> b.date!==a.date ? (a.date<b.date?1:-1) : b.created-a.created);
+  if(finSelectMode){
+    const validIds = new Set(periodOps.map(o=>o.id));
+    [...finSelectedOps].forEach(id=>{ if(!validIds.has(id)) finSelectedOps.delete(id); });
+  }
   const historyHtml = periodOps.length ? periodOps.slice(0,120).map(o=>{
     const dl = new Date(o.date+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
     const isExp = o.type==='expense';
-    return `<div class="fin-op" onclick="openOpModal('${o.type}','${o.id}')">
+    const sel = finSelectedOps.has(o.id);
+    const rowClick = finSelectMode ? `toggleOpSelect('${o.id}')` : `openOpModal('${o.type}','${o.id}')`;
+    return `<div class="fin-op ${sel?'sel':''}" onclick="${rowClick}">
+      ${finSelectMode?`<input type="checkbox" class="fin-op-check" onclick="event.stopPropagation();toggleOpSelect('${o.id}')" ${sel?'checked':''}>`:''}
       <div class="fin-op-icon ${isExp?'exp':'inc'}">${isExp?'−':'+'}</div>
       <div class="fin-op-main">
         <div class="fin-op-cat">${isExp?esc(o.category||'Другое'):'Доход'}${o.subcategory?` <span style="color:var(--text-faint)">› ${esc(o.subcategory)}</span>`:''}${o.note?` · <span style="color:var(--text-faint)">${esc(o.note)}</span>`:''}</div>
@@ -3354,10 +3398,19 @@ function renderFinance(){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 style="margin:0">Операции ${finPeriod==='all'?'':rangeLabel}</h3>
         <div style="display:flex;gap:8px">
+          ${(periodOps.length || finSelectMode) ? `<button class="btn btn-ghost btn-sm" onclick="toggleFinSelectMode()">${finSelectMode?'Отмена':'Выбрать'}</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="openFinCats()">Категории</button>
           <button class="btn btn-ghost btn-sm" onclick="openOpModal('income')">+ Доход</button>
         </div>
       </div>
+      ${finSelectMode ? `<div class="fin-select-bar">
+        <span>Выбрано: <b>${finSelectedOps.size}</b> из ${periodOps.length}</span>
+        <div style="display:flex;gap:8px;margin-left:auto">
+          <button class="btn btn-ghost btn-sm" onclick="finSelectAllOps()">Выбрать все</button>
+          <button class="btn btn-ghost btn-sm" onclick="finClearSelection()">Снять выбор</button>
+          <button class="btn btn-danger btn-sm" onclick="finDeleteSelected()" ${finSelectedOps.size?'':'disabled'}>Удалить (${finSelectedOps.size})</button>
+        </div>
+      </div>` : ''}
       <div class="fin-op-list">${historyHtml}</div>
     </div>
   `;
