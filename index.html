@@ -1528,18 +1528,6 @@
   </div>
 </div>
 
-<!-- Budget modal -->
-<div class="modal-bg" id="budget-modal">
-  <div class="modal">
-    <h3 class="display">Бюджет на месяц</h3>
-    <label class="fld"><span>Сколько планируешь тратить в месяц, ₽</span><input type="number" id="budget-input" inputmode="decimal" placeholder="0"></label>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" onclick="closeModal('budget-modal')">Отмена</button>
-      <button class="btn btn-primary" onclick="saveBudget()">Сохранить</button>
-    </div>
-  </div>
-</div>
-
 <!-- Accounts modal -->
 <div class="modal-bg" id="accounts-modal">
   <div class="modal modal-wide">
@@ -1927,7 +1915,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1956,7 +1944,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -2025,8 +2013,14 @@ window.onAuthChange = async function(user) {
       if (typeof data.finance.budget !== 'number') data.finance.budget = 0;
       if (!data.finance.subcategories || typeof data.finance.subcategories !== 'object') data.finance.subcategories = {};
       if (!data.finance.catBudgets || typeof data.finance.catBudgets !== 'object') data.finance.catBudgets = {};
-      if (!Array.isArray(data.finance.accounts) || !data.finance.accounts.length) data.finance.accounts = [{ id:'acc_default', name:'Основной', startBalance:0, created: Date.now() }];
+      if (!Array.isArray(data.finance.accounts) || !data.finance.accounts.length) data.finance.accounts = [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }];
       data.finance.operations.forEach(o=>{ if(o.type!=='transfer' && !o.account) o.account = data.finance.accounts[0].id; });
+      data.finance.accounts.forEach(a=>{ if(typeof a.budget!=='number') a.budget = 0; });
+      // one-time migration: move the old single monthly budget onto the first account, then clear it
+      if (typeof data.finance.budget === 'number' && data.finance.budget > 0) {
+        if (data.finance.accounts[0] && !data.finance.accounts[0].budget) data.finance.accounts[0].budget = data.finance.budget;
+        data.finance.budget = 0;
+      }
       if (!data.coins || typeof data.coins !== 'object') data.coins = { ledger:[], rules:{habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70}, rewards:[] };
       if (!Array.isArray(data.coins.ledger)) data.coins.ledger = [];
       if (!data.coins.rules || typeof data.coins.rules !== 'object') data.coins.rules = {habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70};
@@ -3175,15 +3169,6 @@ function finDeleteSelected(){
   toast('Операции удалены');
 }
 
-function openBudgetModal(){
-  document.getElementById('budget-input').value = fin().budget || '';
-  document.getElementById('budget-modal').classList.add('open');
-}
-function saveBudget(){
-  const b = parseFloat(document.getElementById('budget-input').value) || 0;
-  fin().budget = b; save(); closeModal('budget-modal'); renderFinance();
-  toast('Бюджет сохранён');
-}
 
 function openFinCats(){ renderFinCats(); document.getElementById('fincat-modal').classList.add('open'); }
 function renderFinCats(){
@@ -3258,6 +3243,9 @@ function renderAccountsList(){
         <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-faint)">начальный баланс
           <input type="number" class="fincat-budget-in" value="${a.startBalance||''}" placeholder="0" onchange="setAccountStart('${a.id}', this.value)">
         </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-faint)">бюджет в месяц
+          <input type="number" class="fincat-budget-in" value="${a.budget||''}" placeholder="0" onchange="setAccountBudget('${a.id}', this.value)">
+        </label>
         <span style="margin-left:auto;font-size:13px">текущий: <b style="color:${bal>=0?'var(--teal)':'var(--rose)'}">${fmtMoney(bal)}</b></span>
       </div>
     </div>`;
@@ -3265,7 +3253,7 @@ function renderAccountsList(){
 }
 function addAccount(input){
   const name = input.value.trim(); if(!name) return;
-  fin().accounts.push({ id: uid(), name, startBalance:0, created: Date.now() });
+  fin().accounts.push({ id: uid(), name, startBalance:0, budget:0, created: Date.now() });
   input.value=''; save(); renderAccountsList(); renderFinance();
 }
 function renameAccount(id, val){
@@ -3277,6 +3265,11 @@ function renameAccount(id, val){
 function setAccountStart(id, val){
   const a = accountById(id); if(!a) return;
   a.startBalance = parseFloat(val)||0;
+  save(); renderAccountsList(); renderFinance();
+}
+function setAccountBudget(id, val){
+  const a = accountById(id); if(!a) return;
+  a.budget = parseFloat(val)||0;
   save(); renderAccountsList(); renderFinance();
 }
 function removeAccount(id){
@@ -3482,10 +3475,11 @@ function renderFinance(){
   const pdays = periodDays();
   const avgPerDay = spent/pdays;
 
-  // budget is monthly — show only when viewing month-like periods
-  const budget = f.budget||0;
-  const monthSpent = opsInMonth().filter(o=>o.type==='expense').reduce((a,o)=>a+o.amount,0);
-  const remain = budget - monthSpent;
+  // budgets are set per account (monthly) — show only when viewing month-like periods
+  const monthExpenses = opsInMonth().filter(o=>o.type==='expense');
+  const monthSpent = monthExpenses.reduce((a,o)=>a+o.amount,0);
+  const acctSpentMonth = {};
+  monthExpenses.forEach(o=>{ if(o.account) acctSpentMonth[o.account] = (acctSpentMonth[o.account]||0) + o.amount; });
   const daysInMonth = new Date(+todayKey().slice(0,4), +todayKey().slice(5,7), 0).getDate();
   const dayNow = Math.min(daysInMonth, Number(todayKey().slice(8,10)));
   const monthForecast = dayNow>0 ? (monthSpent/dayNow)*daysInMonth : 0;
@@ -3497,22 +3491,31 @@ function renderFinance(){
   const maxCat = topCats.length?topCats[0][1]:1;
   const topCatName = topCats.length?topCats[0][0]:'—';
 
-  // budget card (always month-based)
-  const budgetPct = budget>0 ? Math.min(100, Math.round(monthSpent/budget*100)) : 0;
-  const overBudget = budget>0 && monthSpent>budget;
+  // budgets by account (always month-based)
   const monthName = new Date(+todayKey().slice(0,4), +todayKey().slice(5,7)-1, 1).toLocaleDateString('ru-RU',{month:'long'});
-  const budgetCard = budget>0 ? `
-    <div class="fin-budget">
-      <div class="fin-budget-head">
-        <span>Бюджет на ${monthName}</span>
-        <span><b>${fmtMoney(monthSpent)}</b> из ${fmtMoney(budget)} · <span class="icon-btn" style="display:inline;color:var(--amber)" onclick="openBudgetModal()">изменить</span></span>
-      </div>
-      <div class="bar ${overBudget?'':'teal'}"><i style="width:${budgetPct}%;${overBudget?'background:var(--rose)':''}"></i></div>
-      <div class="fin-budget-foot ${remain<0?'over':''}">${remain>=0?`осталось ${fmtMoney(remain)} · прогноз ${fmtMoney(monthForecast)}`:`перерасход ${fmtMoney(-remain)}`}</div>
+  const budgetedAccounts = finAccounts().filter(a=>(a.budget||0)>0);
+  const totalBudget = budgetedAccounts.reduce((s,a)=>s+a.budget,0);
+  const totalBudgetSpent = budgetedAccounts.reduce((s,a)=>s+(acctSpentMonth[a.id]||0),0);
+  const budgetRemain = totalBudget - totalBudgetSpent;
+  const accountBudgetBlock = budgetedAccounts.length ? `
+    <div class="chart-wrap" style="margin-bottom:20px">
+      <h3>Бюджеты по счетам (${monthName})</h3>
+      ${budgetedAccounts.map(a=>{
+        const sp = acctSpentMonth[a.id]||0;
+        const b = a.budget;
+        const pct = Math.min(100, Math.round(sp/b*100));
+        const over = sp>b;
+        const near = !over && sp/b>=0.8;
+        const col = over?'var(--rose)':near?'var(--amber)':'var(--teal)';
+        return `<div class="catbudget-row">
+          <div class="catbudget-head"><span>${esc(a.name)}</span><span style="color:${col}">${fmtMoney(sp)} / ${fmtMoney(b)}${over?' · превышен':near?' · почти':''}</span></div>
+          <div class="bar"><i style="width:${pct}%;background:${col}"></i></div>
+        </div>`;
+      }).join('')}
     </div>` : `
     <div class="fin-budget fin-budget-empty">
-      <span>Бюджет на месяц не задан</span>
-      <button class="btn btn-ghost btn-sm" onclick="openBudgetModal()">Поставить бюджет</button>
+      <span>Бюджеты по счетам не заданы</span>
+      <button class="btn btn-ghost btn-sm" onclick="openAccountsModal()">Настроить в счетах</button>
     </div>`;
 
   // range label for metrics
@@ -3530,7 +3533,7 @@ function renderFinance(){
     avgday:    { label:'средний расход в день', val:fmtMoney(avgPerDay) },
     topcat:    { label:'крупнейшая категория', val:esc(topCatName), small:true },
     forecast:  { label:'прогноз до конца месяца', val:fmtMoney(monthForecast) },
-    remain:    { label:'остаток бюджета (месяц)', val: budget>0?fmtMoney(budget-monthSpent):'—' },
+    remain:    { label:'остаток бюджета (месяц)', val: totalBudget>0?fmtMoney(budgetRemain):'—' },
     monthspent:{ label:'потрачено в этом месяце', val:fmtMoney(monthSpent), color:'var(--rose)' },
     monthbal:  { label:'баланс месяца', val:fmtMoney(monthBalance), color: monthBalance>=0?'var(--teal)':'var(--rose)' },
     opcount:   { label:'операций за период', val:String(ops.length) },
@@ -3591,7 +3594,6 @@ function renderFinance(){
   }).join('') : `<div class="wf-none">За этот период операций нет.</div>`;
 
   // per-category budgets (month-based), with % used and warnings
-  const monthExpenses = opsInMonth().filter(o=>o.type==='expense');
   const catSpentMonth = {};
   monthExpenses.forEach(o=>{ const c=o.category||'Другое'; catSpentMonth[c]=(catSpentMonth[c]||0)+o.amount; });
   const catBudgetEntries = Object.entries(f.catBudgets||{}).filter(([c,b])=>b>0);
@@ -3614,7 +3616,7 @@ function renderFinance(){
   box.innerHTML = `
     ${periodBar}
     ${accountsRow}
-    ${budgetCard}
+    ${accountBudgetBlock}
     ${catBudgetBlock}
     ${metrics}
     ${catBlock}
@@ -5847,7 +5849,7 @@ function renderOverview() {
   const dayToday = data.days[tk];
   // finance this month
   const spent = opsInMonth().filter(o=>o.type==='expense').reduce((a,o)=>a+o.amount,0);
-  const budget = data.finance.budget||0;
+  const budget = (data.finance.accounts||[]).reduce((s,a)=>s+(a.budget||0),0);
   // meals today
   const mealSum = sumDay(tk);
   const mealGoals = data.meals.goals;
