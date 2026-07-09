@@ -185,7 +185,8 @@
     justify-content: center; transition: .15s; font-size: 12px; color: transparent;
   }
   .ms.done .check { background: var(--teal); border-color: var(--teal); color: #06241d; }
-  .ms .txt { flex: 1; font-size: 14px; }
+  .ms .txt { flex: 1; font-size: 14px; background: transparent; border: 1px solid transparent; padding: 3px 6px; border-radius: 6px; color: var(--text); font-family: inherit; }
+  .ms .txt:hover, .ms .txt:focus { border-color: var(--line); background: var(--panel); }
   .ms.done .txt { color: var(--text-faint); text-decoration: line-through; }
   .ms-add { display: flex; gap: 8px; margin-top: 8px; }
   .ms-add input { flex: 1; }
@@ -779,6 +780,8 @@
   .sphere-foot { display: flex; gap: 6px; margin-top: 12px; }
   .sphere-create { display: flex; gap: 6px; margin-top: 12px; flex-wrap: wrap; padding-top: 12px; border-top: 1px solid var(--line); }
   .fld-lbl { display: block; font-size: 12.5px; color: var(--text-dim); margin-bottom: 8px; }
+  .sph-projects-list { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; margin-top: 4px; padding: 8px 10px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
+  .sph-proj-chk { display: flex; align-items: center; gap: 8px; font-size: 13.5px; cursor: pointer; }
   .sph-goals-edit { margin-bottom: 14px; }
   #sph-goals .sgd { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13.5px; }
   #sph-goals .sgd .x { color: var(--text-faint); cursor: pointer; margin-left: auto; }
@@ -1867,8 +1870,8 @@
   <div class="modal">
     <h3 class="display" id="sphere-modal-title">Сфера</h3>
     <label class="fld"><span>Название сферы</span><input type="text" id="sph-name" placeholder="Например, Здоровье"></label>
-    <label class="fld"><span>Привязать проект (необязательно)</span>
-      <select id="sph-project"><option value="">— без проекта —</option></select>
+    <label class="fld"><span>Привязанные проекты (можно несколько)</span>
+      <div id="sph-projects" class="sph-projects-list"></div>
     </label>
     <div class="sph-goals-edit">
       <span class="fld-lbl">Цели в этой сфере</span>
@@ -1999,6 +2002,13 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.dump)) data.dump = []; // backfill for older saves
       if (!Array.isArray(data.wheelArchive)) data.wheelArchive = [];
       if (typeof data.wheel === 'undefined') data.wheel = null;
+      // migrate a sphere's single linked project to a list of projects
+      if (data.wheel && Array.isArray(data.wheel.spheres)) {
+        data.wheel.spheres.forEach(s=>{
+          if (!Array.isArray(s.projectIds)) s.projectIds = s.projectId ? [s.projectId] : [];
+          delete s.projectId;
+        });
+      }
       if (!Array.isArray(data.projectArchive)) data.projectArchive = [];
       if (!Array.isArray(data.dreams)) data.dreams = [];
       if (!data.days || typeof data.days !== 'object' || Array.isArray(data.days)) data.days = {};
@@ -2164,10 +2174,10 @@ function saveProject() {
   if (editingProjectId){
     const p = data.projects.find(x=>x.id===editingProjectId);
     p.name = name; p.due = due;
-    // update sphere link: clear old, set new
+    // update sphere link: unlink from any sphere, then link to the chosen one
     if(data.wheel){
-      data.wheel.spheres.forEach(s=>{ if(s.projectId===p.id) s.projectId=''; });
-      if(sphereId){ const s=data.wheel.spheres.find(x=>x.id===sphereId); if(s) s.projectId=p.id; }
+      data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==p.id); });
+      if(sphereId){ const s=data.wheel.spheres.find(x=>x.id===sphereId); if(s){ s.projectIds=s.projectIds||[]; s.projectIds.push(p.id); } }
     }
     save(); closeModal('project-modal'); renderProjects(); renderWheel(); renderTasks();
     toast('Проект обновлён');
@@ -2176,7 +2186,7 @@ function saveProject() {
     data.projects.push(proj);
     if (sphereId && data.wheel) {
       const s = data.wheel.spheres.find(x=>x.id===sphereId);
-      if (s) s.projectId = proj.id;
+      if (s){ s.projectIds=s.projectIds||[]; s.projectIds.push(proj.id); }
     }
     save(); closeModal('project-modal'); renderProjects(); renderWheel(); renderTasks();
     toast('Проект создан');
@@ -2202,11 +2212,11 @@ function completeProject(id){
   });
   // remove from active and unlink sphere
   data.projects = data.projects.filter(x=>x.id!==id);
-  if(data.wheel){ data.wheel.spheres.forEach(s=>{ if(s.projectId===id) s.projectId=''; }); }
+  if(data.wheel){ data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==id); }); }
   save(); renderProjects(); renderWheel(); renderTasks();
   toast('Проект в журнале готовых 🎉');
 }
-function deleteProject(id){ if(confirm('Удалить проект целиком?')){ data.projects = data.projects.filter(p=>p.id!==id); if(data.wheel){ data.wheel.spheres.forEach(s=>{ if(s.projectId===id) s.projectId=''; }); } save(); renderProjects(); renderWheel(); renderTasks(); } }
+function deleteProject(id){ if(confirm('Удалить проект целиком?')){ data.projects = data.projects.filter(p=>p.id!==id); if(data.wheel){ data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==id); }); } save(); renderProjects(); renderWheel(); renderTasks(); } }
 function addMilestone(pid, input) {
   const txt = input.value.trim(); if(!txt) return;
   const p = data.projects.find(x=>x.id===pid);
@@ -2219,12 +2229,19 @@ function toggleMilestone(pid, mid) {
   m.done = !m.done; save(); renderProjects(); renderWheel();
 }
 function delMilestone(pid, mid){ const p=data.projects.find(x=>x.id===pid); p.milestones=p.milestones.filter(m=>m.id!==mid); save(); renderProjects(); renderWheel(); }
+function renameMilestone(pid, mid, val){
+  const p = data.projects.find(x=>x.id===pid); if(!p) return;
+  const m = p.milestones.find(x=>x.id===mid); if(!m) return;
+  const txt = val.trim();
+  if(!txt || txt===m.txt){ renderProjects(); return; }
+  m.txt = txt; save(); renderProjects(); renderWheel();
+}
 
 function projectPct(p){ if(!p.milestones.length) return 0; return Math.round(p.milestones.filter(m=>m.done).length / p.milestones.length * 100); }
 // reverse lookup: which wheel sphere does this project belong to (if any)
 function projectSphere(projId){
   if(!data.wheel) return null;
-  return data.wheel.spheres.find(s=>s.projectId===projId) || null;
+  return data.wheel.spheres.find(s=>(s.projectIds||[]).includes(projId)) || null;
 }
 
 function renderProjects() {
@@ -2261,7 +2278,7 @@ function renderProjects() {
       <div class="milestones">
         ${p.milestones.map(m=>`<div class="ms ${m.done?'done':''}">
           <div class="check" onclick="toggleMilestone('${p.id}','${m.id}')">✓</div>
-          <div class="txt">${esc(m.txt)}</div>
+          <input class="txt" value="${esc(m.txt)}" onchange="renameMilestone('${p.id}','${m.id}', this.value)">
           <button class="icon-btn" onclick="delMilestone('${p.id}','${m.id}')">✕</button>
         </div>`).join('')}
       </div>
@@ -5250,20 +5267,20 @@ function renderWheelFolder(){
   const spheres = data.wheel.spheres;
   box.innerHTML = spheres.map((s,i)=>{
     const col = sphereColor(i);
-    const proj = s.projectId ? data.projects.find(p=>p.id===s.projectId) : null;
+    const projs = (s.projectIds||[]).map(pid=>data.projects.find(p=>p.id===pid)).filter(Boolean);
     const sphereTasks = data.tasks.filter(t=>t.sphereId===s.id && t.col!=='done' && !t.inbox);
     const doneToday = data.tasks.filter(t=>t.sphereId===s.id && isOnBoardDone(t));
-    const projHtml = proj ? `<div class="wf-item wf-proj" onclick="switchView('projects')">
+    const projHtml = projs.map(proj=>`<div class="wf-item wf-proj" onclick="switchView('projects')">
         <span class="wf-bar"><i style="width:${projectPct(proj)}%;background:${col}"></i></span>
         <span class="wf-name">${esc(proj.name)}</span>
         <span class="wf-tag">проект ${projectPct(proj)}%</span>
-      </div>` : '';
+      </div>`).join('');
     const tasksHtml = sphereTasks.map(t=>`<div class="wf-item">
         <div class="tcheck" style="width:17px;height:17px" onclick="toggleTaskDone('${t.id}')">✓</div>
         <span class="wf-name">${esc(t.txt)}</span>
         <span class="wf-col">${COLS.find(c=>c.id===t.col).title}</span>
       </div>`).join('');
-    const empty = !proj && !sphereTasks.length && !doneToday.length
+    const empty = !projs.length && !sphereTasks.length && !doneToday.length
       ? `<div class="wf-none">пусто — добавь цель или задачу</div>` : '';
     return `<div class="wf-sphere">
       <div class="wf-head">
@@ -5277,7 +5294,7 @@ function renderWheelFolder(){
       </div>
       <div class="wf-actions">
         <button class="btn btn-ghost btn-sm" onclick="addInboxForSphere('${s.id}')">+ входящая</button>
-        ${!proj ? `<button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ проект-цель</button>` : `<button class="btn btn-ghost btn-sm" onclick="switchView('projects')">открыть проект →</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ проект-цель</button>
       </div>
     </div>`;
   }).join('');
@@ -5445,7 +5462,7 @@ function scoreColor(v){ // 1..10 → red→amber→green
   if(v<=6) return '#f6b34b';
   return '#5ad1b8';
 }
-function newSphere(name){ return { id: uid(), name, score: 5, goals: [], projectId: '' }; }
+function newSphere(name){ return { id: uid(), name, score: 5, goals: [], projectIds: [] }; }
 
 function ensureWheel(){
   if(!data.wheel){
@@ -5459,10 +5476,10 @@ function ensureWheel(){
 function sphereProgress(s){
   let total=0, done=0;
   (s.goals||[]).forEach(g=>{ total++; if(g.done) done++; });
-  if(s.projectId){
-    const p = data.projects.find(x=>x.id===s.projectId);
+  (s.projectIds||[]).forEach(pid=>{
+    const p = data.projects.find(x=>x.id===pid);
     if(p){ p.milestones.forEach(m=>{ total++; if(m.done) done++; }); }
-  }
+  });
   return { total, done, pct: total? Math.round(done/total*100) : 0 };
 }
 function wheelTotals(w){
@@ -5516,7 +5533,7 @@ function renderWheel(){
   const spheresHtml = w.spheres.map((s,i)=>{
     const col = sphereColor(i);
     const prog = sphereProgress(s);
-    const linkedProj = s.projectId ? data.projects.find(p=>p.id===s.projectId) : null;
+    const linkedProjects = (s.projectIds||[]).map(pid=>data.projects.find(p=>p.id===pid)).filter(Boolean);
     const pips = Array.from({length:10},(_,k)=>{
       const v=k+1; const on=v<=s.score;
       return `<div class="score-pip ${on?'on':''}" onclick="setSphereScore('${s.id}',${v})"
@@ -5526,11 +5543,11 @@ function renderWheel(){
       <div class="gcheck" onclick="toggleSphereGoal('${s.id}','${g.id}')">✓</div>
       <div class="gtx">${esc(g.txt)}</div>
     </div>`).join('');
-    const projHtml = linkedProj ? `<div class="sg proj">
-      <div class="gcheck ${projectPct(linkedProj)===100?'':''}" style="cursor:default;${projectPct(linkedProj)===100?'background:var(--teal);border-color:var(--teal);color:#06241d':''}">${projectPct(linkedProj)===100?'✓':''}</div>
-      <div class="gtx">${esc(linkedProj.name)}</div>
-      <span class="gtag">проект ${projectPct(linkedProj)}%</span>
-    </div>` : '';
+    const projHtml = linkedProjects.map(lp=>`<div class="sg proj">
+      <div class="gcheck" style="cursor:default;${projectPct(lp)===100?'background:var(--teal);border-color:var(--teal);color:#06241d':''}">${projectPct(lp)===100?'✓':''}</div>
+      <div class="gtx">${esc(lp.name)}</div>
+      <span class="gtag">проект ${projectPct(lp)}%</span>
+    </div>`).join('');
     return `<div class="sphere-card">
       <div class="sphere-head">
         <span class="sphere-dot" style="background:${col}"></span>
@@ -5538,13 +5555,13 @@ function renderWheel(){
         <span class="sc-score">${s.score}<small>/10</small></span>
       </div>
       <div class="score-row">${pips}</div>
-      <div class="sphere-goals">${projHtml}${goalsHtml || (!linkedProj?'<div style="font-size:12.5px;color:var(--text-faint);padding:4px 7px">целей пока нет</div>':'')}</div>
+      <div class="sphere-goals">${projHtml}${goalsHtml || (!linkedProjects.length?'<div style="font-size:12.5px;color:var(--text-faint);padding:4px 7px">целей пока нет</div>':'')}</div>
       ${prog.total ? `<div class="sphere-progress">
         <div class="sp-lbl"><span>прогресс целей</span><span>${prog.done}/${prog.total}</span></div>
         <div class="bar teal"><i style="width:${prog.pct}%"></i></div>
       </div>`:''}
       <div class="sphere-create">
-        ${!linkedProj ? `<button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ проект</button>` : `<button class="btn btn-ghost btn-sm" onclick="switchView('projects')">проект →</button>`}
+        <button class="btn btn-ghost btn-sm" onclick="openProjectModal('${s.id}')">+ проект</button>
         <button class="btn btn-ghost btn-sm" onclick="addTaskForSphere('${s.id}')">+ задача</button>
         <button class="btn btn-ghost btn-sm" onclick="addInboxForSphere('${s.id}')">+ входящая</button>
       </div>
@@ -5631,20 +5648,29 @@ function openSphere(sid){
   ensureWheel();
   if(sid){
     const s = data.wheel.spheres.find(x=>x.id===sid);
-    sphereDraft = { id:s.id, name:s.name, projectId:s.projectId||'', goals: s.goals.map(g=>({...g})) };
+    sphereDraft = { id:s.id, name:s.name, projectIds:(s.projectIds||[]).slice(), goals: s.goals.map(g=>({...g})) };
     document.getElementById('sphere-modal-title').textContent = 'Изменить сферу';
   } else {
-    sphereDraft = { id:null, name:'', projectId:'', goals:[] };
+    sphereDraft = { id:null, name:'', projectIds:[], goals:[] };
     document.getElementById('sphere-modal-title').textContent = 'Новая сфера';
   }
   document.getElementById('sph-name').value = sphereDraft.name;
-  // populate project dropdown
-  const sel = document.getElementById('sph-project');
-  sel.innerHTML = '<option value="">— без проекта —</option>' +
-    data.projects.map(p=>`<option value="${p.id}" ${sphereDraft.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
+  renderSphereProjectsDraft();
   renderSphereGoalsDraft();
   document.getElementById('sphere-modal').classList.add('open');
   setTimeout(()=>document.getElementById('sph-name').focus(),50);
+}
+function renderSphereProjectsDraft(){
+  const box = document.getElementById('sph-projects');
+  if(!data.projects.length){ box.innerHTML = '<div class="wf-none" style="padding:6px 0">Пока нет проектов — создай их на вкладке «Проекты»</div>'; return; }
+  box.innerHTML = data.projects.map(p=>`<label class="sph-proj-chk">
+    <input type="checkbox" value="${p.id}" ${sphereDraft.projectIds.includes(p.id)?'checked':''} onchange="toggleSphereProjectDraft('${p.id}', this.checked)">
+    <span>${esc(p.name)}</span>
+  </label>`).join('');
+}
+function toggleSphereProjectDraft(pid, checked){
+  if(checked){ if(!sphereDraft.projectIds.includes(pid)) sphereDraft.projectIds.push(pid); }
+  else { sphereDraft.projectIds = sphereDraft.projectIds.filter(id=>id!==pid); }
 }
 function renderSphereGoalsDraft(){
   const box = document.getElementById('sph-goals');
@@ -5662,14 +5688,13 @@ function saveSphere(){
   const name = document.getElementById('sph-name').value.trim();
   if(!name){ toast('Впиши название сферы'); return; }
   sphereDraft.name = name;
-  sphereDraft.projectId = document.getElementById('sph-project').value;
   ensureWheel();
   if(sphereDraft.id){
     const s = data.wheel.spheres.find(x=>x.id===sphereDraft.id);
-    s.name=sphereDraft.name; s.projectId=sphereDraft.projectId; s.goals=sphereDraft.goals;
+    s.name=sphereDraft.name; s.projectIds=sphereDraft.projectIds; s.goals=sphereDraft.goals;
   } else {
     const s = newSphere(sphereDraft.name);
-    s.projectId=sphereDraft.projectId; s.goals=sphereDraft.goals;
+    s.projectIds=sphereDraft.projectIds; s.goals=sphereDraft.goals;
     data.wheel.spheres.push(s);
   }
   save(); closeModal('sphere-modal'); renderWheel(); renderTasks();
@@ -5713,7 +5738,7 @@ function confirmNewWheel(){
     // carry over sphere names/structure, reset scores+goals
     const remap = {}; // old sphere id -> new sphere id (matched by name)
     const carried = data.wheel.spheres.map(s=>{
-      const ns = newSphere(s.name); ns.projectId = s.projectId||'';
+      const ns = newSphere(s.name); ns.projectIds = (s.projectIds||[]).slice();
       ns.goals = (s.goals||[]).map(g=>({ id:uid(), txt:g.txt, done:false }));
       remap[s.id] = ns.id;
       return ns;
