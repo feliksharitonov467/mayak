@@ -321,6 +321,15 @@
   .fin-op-amount { font-size: 14.5px; font-weight: 600; flex: none; }
   .fin-op-amount.exp { color: var(--rose); }
   .fin-op-amount.inc { color: var(--teal); }
+  .fin-op-icon.xfer { background: rgba(230,180,80,.15); color: var(--amber); }
+  .fin-op-amount.xfer { color: var(--amber); }
+  .accounts-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .account-card { flex: none; min-width: 130px; padding: 12px 14px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 9px; cursor: pointer; transition: .12s; }
+  .account-card:hover { border-color: var(--amber-soft); }
+  .account-card.on { border-color: var(--amber); background: rgba(230,180,80,.08); }
+  .account-card.ghost { display: flex; align-items: center; justify-content: center; color: var(--text-faint); font-size: 12.5px; }
+  .account-card-name { font-size: 12.5px; color: var(--text-dim); margin-bottom: 4px; }
+  .account-card-bal { font-size: 16px; font-weight: 700; }
   .fincat-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; max-height: 260px; overflow-y: auto; }
   .fincat-item { display: flex; justify-content: space-between; align-items: center; padding: 9px 12px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 13.5px; }
   .fincat-item .x { color: var(--text-faint); cursor: pointer; }
@@ -1504,6 +1513,7 @@
       <button id="op-type-income" class="op-type" onclick="setOpType('income')">Доход</button>
     </div>
     <label class="fld"><span>Сумма, ₽</span><input type="number" id="op-amount" inputmode="decimal" placeholder="0"></label>
+    <label class="fld"><span>Счёт</span><select id="op-account"></select></label>
     <label class="fld" id="op-cat-field"><span>Категория</span><select id="op-category" onchange="updateOpSubcats()"></select></label>
     <label class="fld" id="op-subcat-field" style="display:none"><span>Подкатегория</span><select id="op-subcategory"></select></label>
     <label class="fld"><span>Дата</span><input type="date" id="op-date"></label>
@@ -1526,6 +1536,41 @@
     <div class="modal-actions">
       <button class="btn btn-ghost" onclick="closeModal('budget-modal')">Отмена</button>
       <button class="btn btn-primary" onclick="saveBudget()">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<!-- Accounts modal -->
+<div class="modal-bg" id="accounts-modal">
+  <div class="modal modal-wide">
+    <h3 class="display">Счета</h3>
+    <p style="font-size:12.5px;color:var(--text-dim);margin-bottom:12px">Заведи отдельные счета — операционный, инвестиционный, кошелёк — и переводи деньги между ними.</p>
+    <div id="accounts-list" class="fincat-list"></div>
+    <div class="win-custom">
+      <input type="text" id="account-input" placeholder="Название счёта" onkeydown="if(event.key==='Enter'){addAccount(this);}">
+      <button class="btn btn-ghost btn-sm" onclick="addAccount(document.getElementById('account-input'))">Добавить</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('accounts-modal')">Готово</button>
+    </div>
+  </div>
+</div>
+
+<!-- Transfer between accounts modal -->
+<div class="modal-bg" id="transfer-modal">
+  <div class="modal">
+    <h3 class="display" id="transfer-title">Перевод между счетами</h3>
+    <label class="fld"><span>Откуда</span><select id="transfer-from" onchange="updateTransferTargets()"></select></label>
+    <label class="fld"><span>Куда</span><select id="transfer-to"></select></label>
+    <label class="fld"><span>Сумма, ₽</span><input type="number" id="transfer-amount" inputmode="decimal" placeholder="0"></label>
+    <label class="fld"><span>Дата</span><input type="date" id="transfer-date"></label>
+    <label class="fld"><span>Комментарий (необязательно)</span><input type="text" id="transfer-note" placeholder="Например: пополнение инвестиций"></label>
+    <div class="modal-actions" style="justify-content:space-between">
+      <button class="btn btn-ghost btn-sm" id="transfer-delete" onclick="deleteTransferFromModal()" style="display:none">Удалить</button>
+      <div style="display:flex;gap:10px;margin-left:auto">
+        <button class="btn btn-ghost" onclick="closeModal('transfer-modal')">Отмена</button>
+        <button class="btn btn-primary" onclick="saveTransfer()">Перевести</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1882,7 +1927,7 @@
 
 <script>
 /* ============ STORAGE (Firebase Cloud) ============ */
-let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
+let data = { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
 let saveTimer = null;
 
@@ -1911,7 +1956,7 @@ function addDaysKey(key, delta){
   return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth()+1).padStart(2,'0')}-${String(dt.getUTCDate()).padStart(2,'0')}`;
 }
 
-function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
+function blankData(){ return { projects: [], projectArchive: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() }; }
 
 // Debounced cloud save — avoids a write on every keystroke
 function save() {
@@ -1980,6 +2025,8 @@ window.onAuthChange = async function(user) {
       if (typeof data.finance.budget !== 'number') data.finance.budget = 0;
       if (!data.finance.subcategories || typeof data.finance.subcategories !== 'object') data.finance.subcategories = {};
       if (!data.finance.catBudgets || typeof data.finance.catBudgets !== 'object') data.finance.catBudgets = {};
+      if (!Array.isArray(data.finance.accounts) || !data.finance.accounts.length) data.finance.accounts = [{ id:'acc_default', name:'Основной', startBalance:0, created: Date.now() }];
+      data.finance.operations.forEach(o=>{ if(o.type!=='transfer' && !o.account) o.account = data.finance.accounts[0].id; });
       if (!data.coins || typeof data.coins !== 'object') data.coins = { ledger:[], rules:{habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70}, rewards:[] };
       if (!Array.isArray(data.coins.ledger)) data.coins.ledger = [];
       if (!data.coins.rules || typeof data.coins.rules !== 'object') data.coins.rules = {habit:5,win:10,task:5,noOvereat:15,weekClean:100,dayBudget:10,weekBudget:70};
@@ -2928,6 +2975,32 @@ function opsInMonth(mk){ return fin().operations.filter(o=>monthKey(o.date)===(m
 let finPeriod = 'month';            // today|yesterday|week|lastweek|month|lastmonth|all|custom
 let finSelectMode = false;          // bulk-select mode for the operations list
 let finSelectedOps = new Set();     // ids of operations currently selected
+let finAccountFilter = null;        // account id — filters the operations list only
+let lastUsedAccount = null;         // remembered for quick repeated entry
+
+// ---- Accounts ----
+function finAccounts(){ return fin().accounts || []; }
+function accountById(id){ return finAccounts().find(a=>a.id===id); }
+function accountName(id){ const a=accountById(id); return a ? a.name : '—'; }
+function accountBalance(id){
+  const acc = accountById(id);
+  if(!acc) return 0;
+  let bal = acc.startBalance||0;
+  fin().operations.forEach(o=>{
+    if(o.type==='income' && o.account===id) bal += o.amount;
+    else if(o.type==='expense' && o.account===id) bal -= o.amount;
+    else if(o.type==='transfer'){
+      if(o.fromAccount===id) bal -= o.amount;
+      if(o.toAccount===id) bal += o.amount;
+    }
+  });
+  return bal;
+}
+function setFinAccountFilter(id){
+  finAccountFilter = (finAccountFilter===id) ? null : id;
+  finSelectedOps.clear();
+  renderFinance();
+}
 let finCustomFrom = '', finCustomTo = '';
 // Monday-based start of the week containing `key`
 function weekStartKey(key){
@@ -3020,6 +3093,8 @@ function openOpModal(type, id){
   editingOpId = id||null;
   const sel = document.getElementById('op-category');
   sel.innerHTML = fin().categories.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('');
+  const accSel = document.getElementById('op-account');
+  accSel.innerHTML = finAccounts().map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
   if(id){
     const o = fin().operations.find(x=>x.id===id);
     document.getElementById('op-title').textContent = 'Изменить операцию';
@@ -3027,6 +3102,7 @@ function openOpModal(type, id){
     document.getElementById('op-date').value = o.date;
     document.getElementById('op-note').value = o.note||'';
     if(o.category) sel.value = o.category;
+    if(o.account) accSel.value = o.account;
     setOpType(o.type);
     updateOpSubcats(o.subcategory||'');
     document.getElementById('op-delete').style.display = '';
@@ -3035,6 +3111,9 @@ function openOpModal(type, id){
     document.getElementById('op-amount').value = '';
     document.getElementById('op-date').value = todayKey();
     document.getElementById('op-note').value = '';
+    accSel.value = (finAccountFilter && accountById(finAccountFilter)) ? finAccountFilter
+      : (lastUsedAccount && accountById(lastUsedAccount)) ? lastUsedAccount
+      : (finAccounts()[0] && finAccounts()[0].id) || '';
     setOpType(type||'expense');
     updateOpSubcats('');
     document.getElementById('op-delete').style.display = 'none';
@@ -3049,12 +3128,14 @@ function saveOp(){
   const note = document.getElementById('op-note').value.trim();
   const category = opTypeDraft==='expense' ? document.getElementById('op-category').value : '';
   const subcategory = opTypeDraft==='expense' ? document.getElementById('op-subcategory').value : '';
+  const account = document.getElementById('op-account').value || (finAccounts()[0] && finAccounts()[0].id);
+  lastUsedAccount = account;
   if(editingOpId){
     const o = fin().operations.find(x=>x.id===editingOpId);
-    o.type=opTypeDraft; o.amount=amount; o.date=date; o.note=note; o.category=category; o.subcategory=subcategory;
+    o.type=opTypeDraft; o.amount=amount; o.date=date; o.note=note; o.category=category; o.subcategory=subcategory; o.account=account;
     toast('Операция обновлена');
   } else {
-    fin().operations.push({ id: uid(), type:opTypeDraft, amount, category, subcategory, date, note, created: Date.now() });
+    fin().operations.push({ id: uid(), type:opTypeDraft, amount, category, subcategory, date, note, account, created: Date.now() });
     toast('Операция добавлена');
   }
   save(); closeModal('op-modal'); renderFinance();
@@ -3161,6 +3242,116 @@ function setCatBudget(cat, val){
   save(); renderFinance();
 }
 
+// ---- Accounts modal ----
+function openAccountsModal(){ renderAccountsList(); document.getElementById('accounts-modal').classList.add('open'); }
+function renderAccountsList(){
+  const box = document.getElementById('accounts-list');
+  const accs = finAccounts();
+  box.innerHTML = accs.map(a=>{
+    const bal = accountBalance(a.id);
+    return `<div class="fincat-block">
+      <div class="fincat-head">
+        <input class="fincat-name" value="${esc(a.name)}" onchange="renameAccount('${a.id}', this.value)">
+        <span class="x" onclick="removeAccount('${a.id}')" title="Удалить счёт">✕</span>
+      </div>
+      <div class="subcat-row">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-faint)">начальный баланс
+          <input type="number" class="fincat-budget-in" value="${a.startBalance||''}" placeholder="0" onchange="setAccountStart('${a.id}', this.value)">
+        </label>
+        <span style="margin-left:auto;font-size:13px">текущий: <b style="color:${bal>=0?'var(--teal)':'var(--rose)'}">${fmtMoney(bal)}</b></span>
+      </div>
+    </div>`;
+  }).join('') || `<div class="wf-none">Счетов нет.</div>`;
+}
+function addAccount(input){
+  const name = input.value.trim(); if(!name) return;
+  fin().accounts.push({ id: uid(), name, startBalance:0, created: Date.now() });
+  input.value=''; save(); renderAccountsList(); renderFinance();
+}
+function renameAccount(id, val){
+  const a = accountById(id);
+  const name = val.trim();
+  if(!a || !name){ renderAccountsList(); return; }
+  a.name = name; save(); renderAccountsList(); renderFinance();
+}
+function setAccountStart(id, val){
+  const a = accountById(id); if(!a) return;
+  a.startBalance = parseFloat(val)||0;
+  save(); renderAccountsList(); renderFinance();
+}
+function removeAccount(id){
+  const f = fin();
+  if(f.accounts.length<=1){ toast('Должен остаться хотя бы один счёт'); return; }
+  const used = f.operations.some(o=>o.account===id || o.fromAccount===id || o.toAccount===id);
+  if(used){ toast('У этого счёта есть операции — перенеси или удали их, потом счёт можно будет убрать'); return; }
+  if(!confirm(`Удалить счёт «${accountName(id)}»?`)) return;
+  f.accounts = f.accounts.filter(a=>a.id!==id);
+  if(finAccountFilter===id) finAccountFilter=null;
+  save(); renderAccountsList(); renderFinance();
+}
+
+// ---- Transfers between accounts ----
+let editingTransferId = null;
+function updateTransferTargets(){
+  const fromSel = document.getElementById('transfer-from');
+  const toSel = document.getElementById('transfer-to');
+  if(fromSel.value===toSel.value){
+    const other = finAccounts().find(a=>a.id!==fromSel.value);
+    if(other) toSel.value = other.id;
+  }
+}
+function openTransferModal(id){
+  const accs = finAccounts();
+  if(accs.length<2){ toast('Заведи ещё один счёт, чтобы переводить деньги между счетами'); return; }
+  editingTransferId = id||null;
+  const fromSel = document.getElementById('transfer-from');
+  const toSel = document.getElementById('transfer-to');
+  const opts = accs.map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join('');
+  fromSel.innerHTML = opts; toSel.innerHTML = opts;
+  if(id){
+    const o = fin().operations.find(x=>x.id===id);
+    document.getElementById('transfer-title').textContent = 'Изменить перевод';
+    fromSel.value = o.fromAccount; toSel.value = o.toAccount;
+    document.getElementById('transfer-amount').value = o.amount;
+    document.getElementById('transfer-date').value = o.date;
+    document.getElementById('transfer-note').value = o.note||'';
+    document.getElementById('transfer-delete').style.display = '';
+  } else {
+    document.getElementById('transfer-title').textContent = 'Перевод между счетами';
+    fromSel.value = accs[0].id; toSel.value = accs[1].id;
+    document.getElementById('transfer-amount').value = '';
+    document.getElementById('transfer-date').value = todayKey();
+    document.getElementById('transfer-note').value = '';
+    document.getElementById('transfer-delete').style.display = 'none';
+  }
+  document.getElementById('transfer-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('transfer-amount').focus(),50);
+}
+function saveTransfer(){
+  const from = document.getElementById('transfer-from').value;
+  const to = document.getElementById('transfer-to').value;
+  const amount = parseFloat(document.getElementById('transfer-amount').value);
+  if(!amount || amount<=0){ toast('Впиши сумму больше нуля'); return; }
+  if(from===to){ toast('Выбери разные счета'); return; }
+  const date = document.getElementById('transfer-date').value || todayKey();
+  const note = document.getElementById('transfer-note').value.trim();
+  if(editingTransferId){
+    const o = fin().operations.find(x=>x.id===editingTransferId);
+    o.fromAccount=from; o.toAccount=to; o.amount=amount; o.date=date; o.note=note;
+    toast('Перевод обновлён');
+  } else {
+    fin().operations.push({ id: uid(), type:'transfer', fromAccount:from, toAccount:to, amount, date, note, created: Date.now() });
+    toast('Перевод выполнен');
+  }
+  save(); closeModal('transfer-modal'); renderFinance();
+}
+function deleteTransferFromModal(){
+  if(!editingTransferId) return;
+  if(!confirm('Удалить перевод?')) return;
+  fin().operations = fin().operations.filter(o=>o.id!==editingTransferId);
+  save(); closeModal('transfer-modal'); renderFinance();
+}
+
 // registry of metric labels (must match ALL_METRICS ids in renderFinance)
 const FIN_METRIC_LABELS = {
   spent:'Потрачено за период', income:'Доходы за период', balance:'Баланс за период',
@@ -3220,7 +3411,8 @@ function doFinImport(){
     const type = (o.type==='income')?'income':'expense';
     let date = (typeof o.date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(o.date)) ? o.date : todayKey();
     const category = type==='expense' ? (o.category ? String(o.category) : 'Другое') : '';
-    valid.push({ id: uid(), type, amount, category, date, note: o.note?String(o.note):'', created: Date.now() });
+    const account = (finAccountFilter && accountById(finAccountFilter)) ? finAccountFilter : (finAccounts()[0] && finAccounts()[0].id) || '';
+    valid.push({ id: uid(), type, amount, category, date, note: o.note?String(o.note):'', account, created: Date.now() });
   });
   if(!valid.length){ prev.innerHTML=`<div class="fin-import-err">Не найдено корректных операций.<br>${errors.slice(0,5).join('<br>')}</div>`; return; }
   // auto-add any new categories from imported expenses
@@ -3258,6 +3450,27 @@ function renderFinance(){
     <label class="fld" style="flex:1"><span>С</span><input type="date" value="${finCustomFrom}" onchange="setFinCustom('from',this.value)"></label>
     <label class="fld" style="flex:1"><span>По</span><input type="date" value="${finCustomTo}" onchange="setFinCustom('to',this.value)"></label>
   </div>`:''}`;
+
+  // ----- accounts -----
+  const accountsRow = `<div class="chart-wrap" style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0">Счета</h3>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="openTransferModal()">⇄ Перевод</button>
+        <button class="btn btn-ghost btn-sm" onclick="openAccountsModal()">Управлять</button>
+      </div>
+    </div>
+    <div class="accounts-row">
+      ${finAccounts().map(a=>{
+        const bal = accountBalance(a.id);
+        return `<div class="account-card ${finAccountFilter===a.id?'on':''}" onclick="setFinAccountFilter('${a.id}')">
+          <div class="account-card-name">${esc(a.name)}</div>
+          <div class="account-card-bal" style="color:${bal>=0?'var(--teal)':'var(--rose)'}">${fmtMoney(bal)}</div>
+        </div>`;
+      }).join('')}
+      ${finAccountFilter?`<div class="account-card ghost" onclick="setFinAccountFilter(null)">Все счета ✕</div>`:''}
+    </div>
+  </div>`;
 
   // ----- period-scoped data -----
   const range = finPeriodRange();
@@ -3309,7 +3522,7 @@ function renderFinance(){
 
   // configurable metric set — user picks which to show (settings.finMetrics)
   const balance = earned - spent;
-  const monthBalance = opsInMonth().reduce((a,o)=>a+(o.type==='income'?o.amount:-o.amount),0);
+  const monthBalance = opsInMonth().reduce((a,o)=> o.type==='income'?a+o.amount : o.type==='expense'?a-o.amount : a, 0);
   const ALL_METRICS = {
     spent:     { label:'потрачено', val:fmtMoney(spent), color:'var(--rose)' },
     income:    { label:'доходы', val:fmtMoney(earned), color:'var(--teal)' },
@@ -3345,25 +3558,35 @@ function renderFinance(){
       </div>`).join('')}
     </div>` : '';
 
-  // history — operations within the period, newest first
-  const periodOps = ops.slice().sort((a,b)=> b.date!==a.date ? (a.date<b.date?1:-1) : b.created-a.created);
+  // history — operations within the period, newest first (optionally filtered to one account)
+  const periodOpsAll = ops.slice().sort((a,b)=> b.date!==a.date ? (a.date<b.date?1:-1) : b.created-a.created);
+  const periodOps = finAccountFilter ? periodOpsAll.filter(o=> o.account===finAccountFilter || o.fromAccount===finAccountFilter || o.toAccount===finAccountFilter) : periodOpsAll;
   if(finSelectMode){
     const validIds = new Set(periodOps.map(o=>o.id));
     [...finSelectedOps].forEach(id=>{ if(!validIds.has(id)) finSelectedOps.delete(id); });
   }
+  const multiAccount = finAccounts().length > 1;
   const historyHtml = periodOps.length ? periodOps.slice(0,120).map(o=>{
     const dl = new Date(o.date+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
+    const isTransfer = o.type==='transfer';
     const isExp = o.type==='expense';
     const sel = finSelectedOps.has(o.id);
-    const rowClick = finSelectMode ? `toggleOpSelect('${o.id}')` : `openOpModal('${o.type}','${o.id}')`;
+    const rowClick = finSelectMode ? `toggleOpSelect('${o.id}')` : (isTransfer ? `openTransferModal('${o.id}')` : `openOpModal('${o.type}','${o.id}')`);
+    const iconCls = isTransfer ? 'xfer' : (isExp?'exp':'inc');
+    const iconChar = isTransfer ? '⇄' : (isExp?'−':'+');
+    const catLine = isTransfer
+      ? `⇄ ${esc(accountName(o.fromAccount))} → ${esc(accountName(o.toAccount))}`
+      : `${isExp?esc(o.category||'Другое'):'Доход'}${o.subcategory?` <span style="color:var(--text-faint)">› ${esc(o.subcategory)}</span>`:''}${multiAccount?` <span style="color:var(--text-faint)">· ${esc(accountName(o.account))}</span>`:''}`;
+    const noteLine = o.note ? ` · <span style="color:var(--text-faint)">${esc(o.note)}</span>` : '';
+    const amountText = (isTransfer?'':(isExp?'−':'+')) + fmtMoney(o.amount).replace('−','');
     return `<div class="fin-op ${sel?'sel':''}" onclick="${rowClick}">
       ${finSelectMode?`<input type="checkbox" class="fin-op-check" onclick="event.stopPropagation();toggleOpSelect('${o.id}')" ${sel?'checked':''}>`:''}
-      <div class="fin-op-icon ${isExp?'exp':'inc'}">${isExp?'−':'+'}</div>
+      <div class="fin-op-icon ${iconCls}">${iconChar}</div>
       <div class="fin-op-main">
-        <div class="fin-op-cat">${isExp?esc(o.category||'Другое'):'Доход'}${o.subcategory?` <span style="color:var(--text-faint)">› ${esc(o.subcategory)}</span>`:''}${o.note?` · <span style="color:var(--text-faint)">${esc(o.note)}</span>`:''}</div>
+        <div class="fin-op-cat">${catLine}${noteLine}</div>
         <div class="fin-op-date">${dl}</div>
       </div>
-      <div class="fin-op-amount ${isExp?'exp':'inc'}">${isExp?'−':'+'}${fmtMoney(o.amount).replace('−','')}</div>
+      <div class="fin-op-amount ${iconCls}">${amountText}</div>
     </div>`;
   }).join('') : `<div class="wf-none">За этот период операций нет.</div>`;
 
@@ -3390,13 +3613,14 @@ function renderFinance(){
 
   box.innerHTML = `
     ${periodBar}
+    ${accountsRow}
     ${budgetCard}
     ${catBudgetBlock}
     ${metrics}
     ${catBlock}
     <div class="chart-wrap">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <h3 style="margin:0">Операции ${finPeriod==='all'?'':rangeLabel}</h3>
+        <h3 style="margin:0">Операции ${finPeriod==='all'?'':rangeLabel}${finAccountFilter?` · ${esc(accountName(finAccountFilter))}`:''}</h3>
         <div style="display:flex;gap:8px">
           ${(periodOps.length || finSelectMode) ? `<button class="btn btn-ghost btn-sm" onclick="toggleFinSelectMode()">${finSelectMode?'Отмена':'Выбрать'}</button>` : ''}
           <button class="btn btn-ghost btn-sm" onclick="openFinCats()">Категории</button>
@@ -4437,7 +4661,10 @@ function eventsForDate(key, includeHabits){
   data.wins.forEach(w=>{ if(w.date===key){ out.push({type:'win', color:'var(--teal)', icon:'🏆', text:'Победа: '+w.weakness}); } });
   const mp = data.meals.plan[key];
   if(mp){ const cnt = MEAL_TYPES.reduce((a,m)=>a+((mp[m.id]||[]).length),0); if(cnt) out.push({type:'meal', color:'var(--amber-soft)', icon:'🍽', text:cnt+' '+plural(cnt,'блюдо','блюда','блюд')+' в плане'}); }
-  data.finance.operations.forEach(o=>{ if(o.date===key){ out.push({type:'fin', color:o.type==='expense'?'var(--rose)':'var(--teal)', icon:'₽', text:(o.type==='expense'?'−':'+')+Math.round(o.amount)+'₽ '+(o.category||'доход')}); } });
+  data.finance.operations.forEach(o=>{ if(o.date!==key) return;
+    if(o.type==='transfer'){ out.push({type:'fin', color:'var(--amber)', icon:'⇄', text:'Перевод '+Math.round(o.amount)+'₽: '+accountName(o.fromAccount)+' → '+accountName(o.toAccount)}); }
+    else { out.push({type:'fin', color:o.type==='expense'?'var(--rose)':'var(--teal)', icon:'₽', text:(o.type==='expense'?'−':'+')+Math.round(o.amount)+'₽ '+(o.category||'доход')}); }
+  });
   data.events.forEach(e=>{ if(e.date===key){ out.push({type:'event', color:'var(--amber)', icon:'★', text:e.name, eventId:e.id}); } });
   // habits done that day (only shown in day/week detail, not as month dots)
   if(includeHabits){
