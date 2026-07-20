@@ -505,25 +505,10 @@
   .cal-modes { display: flex; gap: 8px; margin-bottom: 14px; }
   .cal-mode { border: 1px solid var(--line); background: var(--panel); color: var(--text-dim); border-radius: 99px; padding: 6px 16px; font-size: 13px; cursor: pointer; font-family: inherit; transition: .12s; }
   .cal-mode.on { background: var(--panel-2); color: var(--amber); border-color: var(--amber-soft); font-weight: 600; }
-  .cal-week { display: flex; flex-direction: column; gap: 8px; }
-  .cw-row { display: flex; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
-  .cw-row.today { border-color: var(--amber); }
-  .cw-day { flex: none; width: 110px; cursor: pointer; }
-  .cw-dow { font-size: 13px; font-weight: 600; }
-  .cw-date { font-size: 12px; color: var(--text-faint); margin-top: 2px; }
   .cw-add { margin-top: 6px; width: 26px; height: 26px; border-radius: 7px; border: 1px solid var(--line); background: var(--ink-soft); color: var(--text-dim); cursor: pointer; font-size: 15px; }
   .cw-add:hover { border-color: var(--amber-soft); color: var(--amber); }
-  .cw-events { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; justify-content: center; }
-  .cw-ev { font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
-  .cw-ev .done { text-decoration: line-through; color: var(--text-faint); }
-  .cw-empty { color: var(--text-faint); font-size: 13px; }
   .cal-day-view { }
   .cd-actions { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-  .cd-group { margin-bottom: 16px; }
-  .cd-group-h { font-size: 12px; text-transform: uppercase; letter-spacing: .5px; color: var(--text-faint); margin-bottom: 8px; }
-  .cd-ev { display: flex; align-items: center; gap: 11px; padding: 10px 13px; background: var(--panel); border: 1px solid var(--line); border-radius: 9px; margin-bottom: 6px; font-size: 14px; }
-  .cd-ev-icon { flex: none; width: 20px; text-align: center; }
-  .cd-ev .done { text-decoration: line-through; color: var(--text-faint); }
   .cal-month { font-size: 16px; font-weight: 600; text-transform: capitalize; min-width: 160px; text-align: center; }
   .cal-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
   .cal-leg { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--text-faint); }
@@ -547,6 +532,41 @@
   .cal-ev-icon { flex: none; width: 20px; text-align: center; }
   .cal-ev-text { font-size: 13.5px; }
   .cal-ev-text.done { text-decoration: line-through; color: var(--text-faint); }
+
+  /* ---------- Hour-grid day/week views (Google/Apple Calendar style) ---------- */
+  .tg-allday-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+  .tg-chip { display: flex; align-items: center; gap: 8px; padding: 7px 11px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; }
+  .tg-chip[onclick] { cursor: pointer; }
+  .tg-chip .done { text-decoration: line-through; color: var(--text-faint); }
+  .tg-wrap { display: flex; max-height: 600px; overflow-y: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  .tg-gutter { flex: none; width: 48px; position: relative; height: 1152px; border-right: 1px solid var(--line); }
+  .tg-hour-label { position: absolute; right: 8px; transform: translateY(-50%); font-size: 10.5px; color: var(--text-faint); white-space: nowrap; }
+  .tg-cols { flex: 1; display: grid; position: relative; height: 1152px; }
+  .tg-col { position: relative; border-right: 1px solid var(--line); height: 1152px; }
+  .tg-col:last-child { border-right: none; }
+  .tg-hour-cell { position: absolute; left: 0; right: 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .tg-hour-cell:hover { background: var(--panel-2); }
+  .tg-event { position: absolute; border-radius: 6px; padding: 3px 6px; font-size: 11.5px; overflow: hidden; cursor: pointer; background: var(--ink-soft); border-left: 3px solid var(--amber); color: var(--text); z-index: 2; line-height: 1.25; box-shadow: 0 1px 3px rgba(0,0,0,.25); }
+  .tg-event:hover { filter: brightness(1.12); }
+  .tg-event.tg-task { border-left-color: var(--rose); }
+  .tg-ev-time { display: block; font-size: 10px; color: var(--text-faint); }
+  .tg-ev-title.done { text-decoration: line-through; color: var(--text-faint); }
+  .tg-now-line { position: absolute; left: 0; right: 0; height: 2px; background: var(--rose); z-index: 3; pointer-events: none; }
+  .tg-now-line::before { content: ''; position: absolute; left: -4px; top: -3px; width: 8px; height: 8px; border-radius: 99px; background: var(--rose); }
+  .tg-week { display: flex; flex-direction: column; gap: 0; }
+  .tg-gutter-spacer { flex: none; width: 48px; }
+  .tg-week-head { display: flex; margin-bottom: 6px; }
+  .tg-week-head-cols { flex: 1; display: grid; grid-template-columns: repeat(7,1fr); gap: 0; }
+  .tg-daycol-head { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; cursor: pointer; border-radius: 8px; position: relative; }
+  .tg-daycol-head:hover { background: var(--panel-2); }
+  .tg-daycol-head.today .tg-dnum { color: var(--amber); font-weight: 700; }
+  .tg-dow { font-size: 11px; color: var(--text-faint); text-transform: uppercase; }
+  .tg-dnum { font-size: 15px; font-weight: 600; }
+  .tg-daycol-head .cw-add { position: absolute; right: 2px; top: 4px; width: 20px; height: 20px; font-size: 13px; }
+  .tg-week-allday { display: flex; margin-bottom: 8px; }
+  .tg-week-allday-cols { flex: 1; display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+  .tg-daycol-allday { display: flex; flex-direction: column; gap: 3px; min-height: 4px; padding: 0 3px; }
+  .tg-daycol-allday .tg-chip { padding: 4px 6px; font-size: 11px; gap: 5px; }
 
   /* ---------- Overview dashboard ---------- */
   .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px,1fr)); gap: 14px; margin-bottom: 16px; }
@@ -973,10 +993,14 @@
     .cal-cell { min-height: 46px; padding: 4px 3px; gap: 3px; }
     .cal-num { font-size: 11px; }
     .cal-grid { gap: 3px; }
-    .cw-row { flex-direction: column; gap: 8px; }
-    .cw-day { width: auto; display: flex; align-items: center; gap: 10px; }
     .cw-add { margin-top: 0; }
     .cal-legend { gap: 8px; }
+    .tg-gutter, .tg-gutter-spacer { width: 34px; }
+    .tg-hour-label { font-size: 9px; right: 5px; }
+    .tg-dow { font-size: 9.5px; }
+    .tg-dnum { font-size: 13px; }
+    .tg-event { font-size: 10px; padding: 2px 4px; }
+    .tg-ev-time { font-size: 9px; }
     .fin-custom-range { flex-direction: column; }
     .coin-stats { grid-template-columns: repeat(2,1fr); }
     .coinrules-grid { grid-template-columns: 1fr; }
@@ -1473,7 +1497,10 @@
   <div class="modal">
     <h3 class="display" id="tm-title">Задача</h3>
     <label class="fld"><span>Текст задачи</span><input type="text" id="tm-text" placeholder="Что нужно сделать"></label>
-    <label class="fld"><span>Дедлайн (необязательно)</span><input type="date" id="tm-due"></label>
+    <div style="display:flex;gap:10px">
+      <label class="fld" style="flex:1"><span>Дедлайн (необязательно)</span><input type="date" id="tm-due"></label>
+      <label class="fld" style="flex:1"><span>Время (необязательно)</span><input type="time" id="tm-duetime"></label>
+    </div>
     <label class="fld"><span>Категория (необязательно)</span>
       <select id="tm-category"></select>
     </label>
@@ -1836,6 +1863,10 @@
     <h3 class="display" id="ev-title">Новое событие</h3>
     <label class="fld"><span>Название</span><input type="text" id="ev-name" placeholder="Например, встреча с врачом"></label>
     <label class="fld"><span>Дата</span><input type="date" id="ev-date"></label>
+    <div style="display:flex;gap:10px">
+      <label class="fld" style="flex:1"><span>Время начала (необязательно)</span><input type="time" id="ev-time"></label>
+      <label class="fld" style="flex:1"><span>Время окончания (необязательно)</span><input type="time" id="ev-endtime"></label>
+    </div>
     <label class="fld"><span>Заметка (необязательно)</span><input type="text" id="ev-note" placeholder="Детали"></label>
     <div class="modal-actions" style="justify-content:space-between">
       <button class="btn btn-ghost btn-sm" id="ev-delete" onclick="deleteEventFromModal()" style="display:none">Удалить</button>
@@ -4758,7 +4789,7 @@ function calToday(){ calAnchor=null; selectedCalDay=todayKey(); renderCalendar()
 // Gather all events for a given date key from every section
 function eventsForDate(key, includeHabits){
   const out = [];
-  data.tasks.forEach(t=>{ if(t.due===key && !t.inbox){ out.push({type:'task', color:'var(--rose)', icon:'✓', text:t.txt, done:t.col==='done'}); } });
+  data.tasks.forEach(t=>{ if(t.due===key && !t.inbox){ out.push({type:'task', color:'var(--rose)', icon:'✓', text:t.txt, done:t.col==='done', taskId:t.id, time:t.dueTime||''}); } });
   data.projects.forEach(p=>{ if(p.due===key){ out.push({type:'project', color:'var(--amber)', icon:'▤', text:'Проект: '+p.name+' ('+projectPct(p)+'%)'}); } });
   if(data.wheel && data.wheel.deadline===key){ out.push({type:'wheel', color:'var(--violet)', icon:'◍', text:'Колесо жизни — срок'}); }
   if(data.days[key] && data.days[key].score>0){ out.push({type:'day', color:'var(--teal)', icon:'☺', text:'Оценка дня: '+data.days[key].score+'/10'}); }
@@ -4769,12 +4800,86 @@ function eventsForDate(key, includeHabits){
     if(o.type==='transfer'){ out.push({type:'fin', color:'var(--amber)', icon:'⇄', text:'Перевод '+Math.round(o.amount)+'₽: '+accountName(o.fromAccount)+' → '+accountName(o.toAccount)}); }
     else { out.push({type:'fin', color:o.type==='expense'?'var(--rose)':'var(--teal)', icon:'₽', text:(o.type==='expense'?'−':'+')+Math.round(o.amount)+'₽ '+(o.category||'доход')}); }
   });
-  data.events.forEach(e=>{ if(e.date===key){ out.push({type:'event', color:'var(--amber)', icon:'★', text:e.name, eventId:e.id}); } });
+  data.events.forEach(e=>{ if(e.date===key){ out.push({type:'event', color:'var(--amber)', icon:'★', text:e.name, eventId:e.id, time:e.time||'', endTime:e.endTime||''}); } });
   // habits done that day (only shown in day/week detail, not as month dots)
   if(includeHabits){
     data.habits.forEach(h=>{ if(h.log[key]){ out.push({type:'habit', color:'var(--amber-soft)', icon:'✦', text:'Привычка: '+h.name}); } });
   }
   return out;
+}
+// click handler for an event/task chip — matches the pattern GCal/Apple use (tap opens the item)
+function evClickAttr(e){
+  if(e.eventId) return `onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`;
+  if(e.taskId) return `onclick="openTaskModal('${e.taskId}')" style="cursor:pointer"`;
+  return '';
+}
+function timeToMin(t){ if(!t) return null; const [h,m]=t.split(':').map(Number); return h*60+(m||0); }
+// all-day strip: everything on that date without a specific time
+function dayAllDayItems(key, includeHabits){ return eventsForDate(key, includeHabits).filter(e=>!e.time); }
+// timed entries positioned on the hour grid — events (with optional end) and tasks (fixed 30-min block)
+function dayTimedItems(key){
+  return eventsForDate(key, false).filter(e=>e.time).map(e=>{
+    const start = timeToMin(e.time);
+    const end = e.type==='event' ? (e.endTime ? Math.max(timeToMin(e.endTime), start+15) : start+60) : start+30;
+    return { ...e, start, end };
+  }).sort((a,b)=>a.start-b.start);
+}
+// classic interval-partitioning layout: overlapping items split the column width between them
+function layoutTimedItems(items){
+  const laid = items.map(it=>({...it}));
+  const active = [];
+  laid.forEach(it=>{
+    for(let i=active.length-1;i>=0;i--){ if(active[i].end<=it.start) active.splice(i,1); }
+    const used = new Set(active.map(a=>a.col));
+    let col=0; while(used.has(col)) col++;
+    it.col = col;
+    active.push({end:it.end, col});
+  });
+  const clusters = []; let cur=[], curEnd=-Infinity;
+  laid.forEach(it=>{
+    if(cur.length && it.start>=curEnd){ clusters.push(cur); cur=[]; curEnd=-Infinity; }
+    cur.push(it); curEnd = Math.max(curEnd, it.end);
+  });
+  if(cur.length) clusters.push(cur);
+  clusters.forEach(cl=>{ const cols = Math.max(...cl.map(it=>it.col))+1; cl.forEach(it=>{ it.cols=cols; }); });
+  return laid;
+}
+const TG_HOURPX = 48; // pixel height of one hour row in the day/week grid
+// shared hour-grid renderer used by both Day and Week views
+function renderTimeGrid(dayKeys){
+  const tk = todayKey();
+  const now = new Date();
+  const nowMin = now.getHours()*60+now.getMinutes();
+  const hourLabels = Array.from({length:24},(_,h)=>`<div class="tg-hour-label" style="top:${h*TG_HOURPX}px">${String(h).padStart(2,'0')}:00</div>`).join('');
+  const cols = dayKeys.map(key=>{
+    const items = layoutTimedItems(dayTimedItems(key));
+    const hourCells = Array.from({length:24},(_,h)=>`<div class="tg-hour-cell" style="top:${h*TG_HOURPX}px;height:${TG_HOURPX}px" onclick="calCreateAt('${key}',${h})"></div>`).join('');
+    const blocks = items.map(it=>{
+      const top = it.start/60*TG_HOURPX;
+      const height = Math.max(20, (it.end-it.start)/60*TG_HOURPX - 2);
+      const wPct = 100/it.cols;
+      const lPct = it.col*wPct;
+      return `<div class="tg-event tg-${it.type}" style="top:${top}px;height:${height}px;left:${lPct}%;width:calc(${wPct}% - 3px)" ${evClickAttr(it)}>
+        <span class="tg-ev-time">${it.time}</span><span class="tg-ev-title ${it.done?'done':''}">${esc(it.text)}</span>
+      </div>`;
+    }).join('');
+    const nowLine = key===tk ? `<div class="tg-now-line" style="top:${nowMin/60*TG_HOURPX}px"></div>` : '';
+    return `<div class="tg-col">${hourCells}${blocks}${nowLine}</div>`;
+  }).join('');
+  return `<div class="tg-wrap" id="tg-wrap">
+    <div class="tg-gutter">${hourLabels}</div>
+    <div class="tg-cols" style="grid-template-columns:repeat(${dayKeys.length},1fr)">${cols}</div>
+  </div>`;
+}
+// scroll the grid so the relevant hours are in view on open (mirrors GCal/Apple's auto-scroll)
+function scrollTimeGridIntoView(){
+  const wrap = document.getElementById('tg-wrap');
+  if(!wrap) return;
+  wrap.scrollTop = Math.max(0, 7*TG_HOURPX - 40);
+}
+// click on an empty grid slot — quick-create an event at that hour
+function calCreateAt(key, hour){
+  openEventModal(null, key, String(hour).padStart(2,'0')+':00');
 }
 
 let selectedCalDay = null;
@@ -4816,6 +4921,11 @@ function renderCalMonth(body){
   renderCalDayDetail();
 }
 
+function alldayChipHtml(e){
+  return `<div class="tg-chip" ${evClickAttr(e)}>
+    <span style="color:${e.color}">${e.icon}</span><span class="${e.done?'done':''}">${esc(e.text)}</span>
+  </div>`;
+}
 function renderCalWeek(body){
   const a = calAnchorKey();
   const monday = weekStartKey(a);
@@ -4823,52 +4933,43 @@ function renderCalWeek(body){
   document.getElementById('cal-month').textContent =
     `${new Date(monday+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})} — ${new Date(weekKeys[6]+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}`;
   const tk = todayKey();
-  const WDL = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
-  const rows = weekKeys.map((k,i)=>{
-    const evs = eventsForDate(k, true);
+  const WDL = ['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+  const headCells = weekKeys.map((k,i)=>{
     const d = new Date(k+'T00:00');
-    const evHtml = evs.length ? evs.map(e=>`<div class="cw-ev" ${e.eventId?`onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`:''}>
-        <span style="color:${e.color}">${e.icon}</span><span class="${e.done?'done':''}">${esc(e.text)}</span></div>`).join('')
-      : `<div class="cw-empty">—</div>`;
-    return `<div class="cw-row ${k===tk?'today':''}">
-      <div class="cw-day" onclick="calOpenDay('${k}')">
-        <div class="cw-dow">${WDL[i]}</div>
-        <div class="cw-date">${d.getDate()}.${String(d.getMonth()+1).padStart(2,'0')}</div>
-        <button class="cw-add" onclick="event.stopPropagation();openEventModal(null,'${k}')">+</button>
-      </div>
-      <div class="cw-events">${evHtml}</div>
+    return `<div class="tg-daycol-head ${k===tk?'today':''}" onclick="calOpenDay('${k}')">
+      <span class="tg-dow">${WDL[i]}</span><span class="tg-dnum">${d.getDate()}</span>
+      <button class="cw-add" onclick="event.stopPropagation();openEventModal(null,'${k}')">+</button>
     </div>`;
   }).join('');
-  body.innerHTML = `<div class="cal-week">${rows}</div>`;
+  const alldayCells = weekKeys.map(k=>{
+    const items = dayAllDayItems(k, true);
+    return `<div class="tg-daycol-allday">${items.map(alldayChipHtml).join('') || ''}</div>`;
+  }).join('');
+  body.innerHTML = `<div class="tg-week">
+    <div class="tg-week-head"><div class="tg-gutter-spacer"></div><div class="tg-week-head-cols">${headCells}</div></div>
+    <div class="tg-week-allday"><div class="tg-gutter-spacer"></div><div class="tg-week-allday-cols">${alldayCells}</div></div>
+    ${renderTimeGrid(weekKeys)}
+  </div>`;
   document.getElementById('cal-day-detail').innerHTML='';
+  scrollTimeGridIntoView();
 }
 
 function renderCalDay(body){
   const key = calAnchorKey();
   const d = new Date(key+'T00:00');
   document.getElementById('cal-month').textContent = d.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
-  const evs = eventsForDate(key, true);
-  // group by type for a structured day view
-  const groups = [
-    ['task','Задачи и дедлайны'],['project','Проекты'],['event','События'],
-    ['day','Оценка дня'],['win','Победы'],['habit','Привычки'],['meal','Питание'],['fin','Финансы'],['wheel','Колесо']
-  ];
-  let html = '';
-  groups.forEach(([type,label])=>{
-    const items = evs.filter(e=>e.type===type);
-    if(!items.length) return;
-    html += `<div class="cd-group"><div class="cd-group-h">${label}</div>${items.map(e=>`<div class="cd-ev" ${e.eventId?`onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`:''}>
-      <span class="cd-ev-icon" style="color:${e.color}">${e.icon}</span><span class="${e.done?'done':''}">${esc(e.text)}</span></div>`).join('')}</div>`;
-  });
-  if(!html) html = `<div class="wf-none">На этот день ничего не запланировано.</div>`;
+  const alldayItems = dayAllDayItems(key, true);
+  const alldayHtml = alldayItems.length ? `<div class="tg-allday-row">${alldayItems.map(alldayChipHtml).join('')}</div>` : '';
   body.innerHTML = `<div class="cal-day-view">
     <div class="cd-actions">
       <button class="btn btn-ghost btn-sm" onclick="openEventModal(null,'${key}')">+ событие</button>
       <button class="btn btn-ghost btn-sm" onclick="calAddTaskForDay('${key}')">+ задача с дедлайном</button>
     </div>
-    ${html}
+    ${alldayHtml}
+    ${renderTimeGrid([key])}
   </div>`;
   document.getElementById('cal-day-detail').innerHTML='';
+  scrollTimeGridIntoView();
 }
 // open a specific day in day-mode
 function calOpenDay(key){ calAnchor=key; setCalMode('day'); }
@@ -4886,11 +4987,16 @@ function renderCalDayDetail(){
   const box = document.getElementById('cal-day-detail');
   if(!box) return;
   if(!selectedCalDay || calMode!=='month'){ box.innerHTML=''; return; }
-  const evs = eventsForDate(selectedCalDay, true);
+  const evs = eventsForDate(selectedCalDay, true).slice().sort((a,b)=>{
+    if(a.time && b.time) return a.time.localeCompare(b.time);
+    if(a.time) return -1;
+    if(b.time) return 1;
+    return 0;
+  });
   const dl = new Date(selectedCalDay+'T00:00').toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
-  const list = evs.length ? evs.map(e=>`<div class="cal-ev" ${e.eventId?`onclick="openEventModal('${e.eventId}')" style="cursor:pointer"`:''}>
+  const list = evs.length ? evs.map(e=>`<div class="cal-ev" ${evClickAttr(e)}>
       <span class="cal-ev-icon" style="color:${e.color}">${e.icon}</span>
-      <span class="cal-ev-text ${e.done?'done':''}">${esc(e.text)}</span>
+      <span class="cal-ev-text ${e.done?'done':''}">${e.time?`<b>${e.time}</b> · `:''}${esc(e.text)}</span>
     </div>`).join('') : `<div class="wf-none">На этот день ничего не запланировано.</div>`;
   box.innerHTML = `<div class="chart-wrap" style="margin-top:18px">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap">
@@ -4906,19 +5012,23 @@ function renderCalDayDetail(){
 
 /* ----- custom events ----- */
 let editingEventId = null;
-function openEventModal(id, presetDate){
+function openEventModal(id, presetDate, presetTime){
   editingEventId = id||null;
   if(id){
     const e = data.events.find(x=>x.id===id);
     document.getElementById('ev-title').textContent='Изменить событие';
     document.getElementById('ev-name').value=e.name;
     document.getElementById('ev-date').value=e.date;
+    document.getElementById('ev-time').value=e.time||'';
+    document.getElementById('ev-endtime').value=e.endTime||'';
     document.getElementById('ev-note').value=e.note||'';
     document.getElementById('ev-delete').style.display='';
   } else {
     document.getElementById('ev-title').textContent='Новое событие';
     document.getElementById('ev-name').value='';
     document.getElementById('ev-date').value=presetDate||selectedCalDay||todayKey();
+    document.getElementById('ev-time').value=presetTime||'';
+    document.getElementById('ev-endtime').value='';
     document.getElementById('ev-note').value='';
     document.getElementById('ev-delete').style.display='none';
   }
@@ -4929,12 +5039,15 @@ function saveEvent(){
   const name=document.getElementById('ev-name').value.trim();
   if(!name){ toast('Впиши название'); return; }
   const date=document.getElementById('ev-date').value||todayKey();
+  const time=document.getElementById('ev-time').value;
+  const endTime=time?document.getElementById('ev-endtime').value:'';
+  if(time && endTime && endTime<=time){ toast('Время окончания должно быть позже начала'); return; }
   const note=document.getElementById('ev-note').value.trim();
   if(editingEventId){
     const e=data.events.find(x=>x.id===editingEventId);
-    e.name=name; e.date=date; e.note=note;
+    e.name=name; e.date=date; e.time=time; e.endTime=endTime; e.note=note;
   } else {
-    data.events.push({ id:uid(), name, date, note, created:Date.now() });
+    data.events.push({ id:uid(), name, date, time, endTime, note, created:Date.now() });
     selectedCalDay=date;
   }
   save(); closeModal('event-modal'); renderCalendar(); toast('Событие сохранено');
@@ -5311,6 +5424,7 @@ function openTaskModal(id){
   document.getElementById('tm-save').textContent = t.inbox ? 'Распределить' : 'Сохранить';
   document.getElementById('tm-text').value = t.txt;
   document.getElementById('tm-due').value = t.due || '';
+  document.getElementById('tm-duetime').value = t.dueTime || '';
   document.getElementById('tm-category').innerHTML = taskCatOptions(t.category||'');
   document.getElementById('tm-project').innerHTML = '<option value="">— без проекта —</option>' +
     data.projects.map(p=>`<option value="${p.id}" ${t.projectId===p.id?'selected':''}>${esc(p.name)}</option>`).join('');
@@ -5326,19 +5440,20 @@ function saveTaskModal(){
   if(!txt){ toast('Впиши текст задачи'); return; }
   t.txt = txt;
   const due = document.getElementById('tm-due').value; if(due) t.due=due; else delete t.due;
+  const dueTime = document.getElementById('tm-duetime').value; if(due && dueTime) t.dueTime=dueTime; else delete t.dueTime;
   const cat = document.getElementById('tm-category').value; if(cat) t.category=cat; else delete t.category;
   const pid = document.getElementById('tm-project').value; if(pid) t.projectId=pid; else delete t.projectId;
   const sid = document.getElementById('tm-sphere').value; if(sid) t.sphereId=sid; else delete t.sphereId;
   // distributing an inbox task moves it onto the board
   if(t.inbox){ delete t.inbox; t.col = 'todo'; }
-  save(); closeModal('task-modal'); renderTasks();
+  save(); closeModal('task-modal'); renderTasks(); renderCalendar();
   toast('Сохранено');
 }
 function deleteTaskFromModal(){
   if(!editingTaskId) return;
   if(!confirm('Удалить задачу?')) return;
   data.tasks = data.tasks.filter(t=>t.id!==editingTaskId);
-  save(); closeModal('task-modal'); renderTasks(); renderLogbook();
+  save(); closeModal('task-modal'); renderTasks(); renderLogbook(); renderCalendar();
 }
 
 // "Колесо" folder inside Tasks: groups projects + sphere-tagged tasks by sphere
