@@ -937,6 +937,9 @@
     transition: .3s; pointer-events: none; z-index: 60;
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.with-action { pointer-events: auto; display: flex; align-items: center; gap: 12px; padding-right: 8px; }
+  .toast-undo-btn { background: var(--amber); color: #2a1c05; border: none; border-radius: 99px; padding: 6px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit; flex: none; }
+  .toast-undo-btn:hover { filter: brightness(1.08); }
 
   /* mobile nav */
   .mobile-tabs { display: none; }
@@ -2179,11 +2182,39 @@ document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => {
 
 /* ============ TOAST ============ */
 let toastTimer;
+let toastUndoTimer;
+let toastUndoActive = null; // pending undo callback, if any
 function toast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer);
+  clearTimeout(toastUndoTimer);
+  toastUndoActive = null;
+  t.classList.remove('with-action');
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span>`;
+  t.classList.add('show');
   toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+// same as toast(), but shows an "Отменить" button for ~6s that runs undoFn if clicked
+function toastUndo(msg, undoFn) {
+  const t = document.getElementById('toast');
+  clearTimeout(toastTimer);
+  clearTimeout(toastUndoTimer);
+  toastUndoActive = undoFn;
+  t.classList.add('with-action');
+  t.innerHTML = `<span class="toast-msg">${esc(msg)}</span><button class="toast-undo-btn" onclick="runToastUndo()">Отменить</button>`;
+  t.classList.add('show');
+  toastUndoTimer = setTimeout(() => {
+    t.classList.remove('show'); t.classList.remove('with-action'); toastUndoActive = null;
+  }, 6000);
+}
+function runToastUndo() {
+  if (!toastUndoActive) return;
+  const fn = toastUndoActive;
+  toastUndoActive = null;
+  clearTimeout(toastUndoTimer);
+  const t = document.getElementById('toast');
+  t.classList.remove('show'); t.classList.remove('with-action');
+  fn();
 }
 
 /* ============ MODAL ============ */
