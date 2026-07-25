@@ -1971,6 +1971,18 @@
   </div>
 </div>
 
+<!-- Generic Да/Отмена confirmation modal (for destructive, non-undoable actions) — kept last so it always stacks above any other open modal -->
+<div class="modal-bg" id="confirm-modal">
+  <div class="modal">
+    <h3 class="display" id="confirm-title">Подтверждение</h3>
+    <p id="confirm-msg" style="font-size:14px;color:var(--text-dim);margin-bottom:4px"></p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="cancelConfirmModal()">Отмена</button>
+      <button class="btn btn-primary" id="confirm-yes-btn" onclick="runConfirmModal()">Да</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <script>
@@ -2219,6 +2231,25 @@ function runToastUndo() {
 
 /* ============ MODAL ============ */
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+// generic Да/Отмена confirmation modal — used for genuinely destructive, non-undoable actions
+let confirmModalAction = null;
+function openConfirmModal(message, onConfirm, opts){
+  confirmModalAction = onConfirm;
+  document.getElementById('confirm-title').textContent = (opts && opts.title) || 'Подтверждение';
+  document.getElementById('confirm-msg').textContent = message;
+  document.getElementById('confirm-yes-btn').textContent = (opts && opts.yesLabel) || 'Да';
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function runConfirmModal(){
+  const fn = confirmModalAction;
+  confirmModalAction = null;
+  closeModal('confirm-modal');
+  if(fn) fn();
+}
+function cancelConfirmModal(){
+  confirmModalAction = null;
+  closeModal('confirm-modal');
+}
 let editingProjectId = null;
 function openProjectModal(preSphereId, preFolderId){
   editingProjectId = null;
@@ -5806,8 +5837,9 @@ function openBinList(){
 function burnBin(){
   const n = (data.dump||[]).length;
   if(!n){ toast('Ведро уже пустое'); return; }
-  if(!confirm(`Сжечь всё навсегда? (${n} ${plural(n,'запись','записи','записей')}) Это нельзя отменить.`)) return;
-
+  openConfirmModal(`Сжечь всё навсегда? (${n} ${plural(n,'запись','записи','записей')}) Это нельзя отменить.`, burnBinConfirmed, {title:'Сжечь ведро', yesLabel:'Сжечь'});
+}
+function burnBinConfirmed(){
   closeModal('bin-modal');
   // make sure we're on the dump view so the fire is visible
   if(!document.getElementById('view-dump').classList.contains('active')) switchView('dump');
@@ -6373,7 +6405,7 @@ document.getElementById('import-file').addEventListener('change', e => {
     try {
       const imp = JSON.parse(r.result);
       if(!imp.projects||!imp.habits||!imp.tasks) throw 0;
-      if(confirm('Заменить текущие данные данными из файла?')){ data=imp; save(); renderAll(); toast('Данные загружены'); }
+      openConfirmModal('Заменить текущие данные данными из файла?', ()=>{ data=imp; save(); renderAll(); toast('Данные загружены'); }, {title:'Заменить данные', yesLabel:'Заменить'});
     } catch(err){ toast('Файл не подошёл — нужен mayak-backup'); }
   };
   r.readAsText(f);
