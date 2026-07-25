@@ -1069,6 +1069,28 @@
   .secord-btns { display: flex; gap: 4px; }
   .secord-btns .icon-btn { width: 32px; height: 32px; }
   .secord-btns .icon-btn:disabled { opacity: .3; cursor: default; }
+
+  /* ---------- Wheel print report ---------- */
+  #print-wheel-area { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #print-wheel-area, #print-wheel-area * { visibility: visible; }
+    #print-wheel-area { display: block !important; position: absolute; left: 0; top: 0; width: 100%; background: #fff; color: #000; }
+    body { background: #fff !important; }
+    .pw-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; font-family: Georgia, serif; }
+    .pw-summary { font-size: 12.5px; color: #333; margin-bottom: 16px; }
+    .pw-svg svg { width: 320px !important; height: auto !important; display: block; margin-bottom: 18px; }
+    .pw-svg .wheel-label { fill: #333 !important; }
+    .pw-spheres { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .pw-sphere { border: 1px solid #ccc; border-radius: 8px; padding: 10px 12px; break-inside: avoid; }
+    .pw-sphere-head { font-size: 14px; margin-bottom: 6px; }
+    .pw-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; }
+    .pw-list { margin: 4px 0 8px 18px; padding: 0; font-size: 12px; }
+    .pw-list li.pw-done { text-decoration: line-through; color: #888; }
+    .pw-project { margin-top: 6px; }
+    .pw-project-name { font-size: 12.5px; font-weight: 600; }
+    .pw-empty { font-size: 12px; color: #999; }
+  }
 </style>
 </head>
 <body>
@@ -1479,6 +1501,7 @@
           <p id="wheel-sub">Оцени сферы и двигай их вверх</p>
         </div>
         <div class="spacer"></div>
+        <button class="btn btn-ghost btn-sm" onclick="printWheel()">🖨 Печать / PDF</button>
         <button class="btn btn-ghost btn-sm" onclick="switchView('wheelArchive')">📓 Прошлые <span id="wheelarch-count" class="log-badge"></span></button>
       </div>
       <div id="wheel-body"></div>
@@ -2025,6 +2048,9 @@
     </div>
   </div>
 </div>
+
+<!-- print-only wheel report, populated by printWheel(); hidden on screen -->
+<div id="print-wheel-area"></div>
 
 <div id="toast"></div>
 
@@ -6235,6 +6261,46 @@ function wheelSvg(w){
     spokes+=`<line x1="${cx}" y1="${cy}" x2="${(cx+R*Math.cos(a)).toFixed(1)}" y2="${(cy+R*Math.sin(a)).toFixed(1)}" stroke="#2e3f60" stroke-width="0.6" opacity="0.6"/>`;
   }
   return `<svg class="wheel-svg" viewBox="0 0 ${VBW} ${VBH}" preserveAspectRatio="xMidYMid meet">${rings}${segs}${spokes}<circle cx="${cx}" cy="${cy}" r="3" fill="#2e3f60"/>${labels}</svg>`;
+}
+
+// builds a print-only report (wheel + spheres + goals + linked projects/tasks) and opens the browser's print dialog
+function printWheel(){
+  if(!data.wheel){ toast('Сначала создай колесо жизни'); return; }
+  const w = data.wheel;
+  const t = wheelTotals(w);
+  const dl = daysLeft(w.deadline);
+  const dateStr = new Date().toLocaleDateString('ru-RU',{day:'numeric',month:'long',year:'numeric'});
+  const deadlineStr = dl===null ? '' : dl<0 ? ' · срок прошёл' : ` · дней до срока: ${dl}`;
+
+  const spheresHtml = w.spheres.map((s,i)=>{
+    const linkedProjects = (s.projectIds||[]).map(pid=>data.projects.find(p=>p.id===pid)).filter(Boolean);
+    const goalsHtml = (s.goals||[]).map(g=>`<li class="${g.done?'pw-done':''}">${esc(g.txt)}</li>`).join('');
+    const tasksForSphere = data.tasks.filter(tk2=>tk2.sphereId===s.id && !tk2.inbox);
+    const tasksHtml = tasksForSphere.map(tsk=>`<li class="${tsk.col==='done'?'pw-done':''}">${esc(tsk.txt)}</li>`).join('');
+    const projectsHtml = linkedProjects.map(p=>{
+      const msHtml = p.milestones.map(m=>`<li class="${m.done?'pw-done':''}">${esc(m.txt)}</li>`).join('');
+      return `<div class="pw-project">
+        <div class="pw-project-name">▤ ${esc(p.name)} (${projectPct(p)}%)</div>
+        ${msHtml?`<ul class="pw-list">${msHtml}</ul>`:''}
+      </div>`;
+    }).join('');
+    const nothing = !goalsHtml && !projectsHtml && !tasksHtml;
+    return `<div class="pw-sphere">
+      <div class="pw-sphere-head"><span class="pw-dot" style="background:${sphereColor(i)}"></span><b>${esc(s.name)}</b> — ${s.score}/10</div>
+      ${goalsHtml?`<ul class="pw-list">${goalsHtml}</ul>`:''}
+      ${tasksHtml?`<ul class="pw-list">${tasksHtml}</ul>`:''}
+      ${projectsHtml}
+      ${nothing?`<div class="pw-empty">целей, задач и проектов пока нет</div>`:''}
+    </div>`;
+  }).join('');
+
+  document.getElementById('print-wheel-area').innerHTML = `
+    <div class="pw-title">Колесо жизни — ${dateStr}</div>
+    <div class="pw-summary">Средняя оценка: ${t.avgScore}/10 · целей выполнено: ${t.pct}% (${t.done}/${t.total})${deadlineStr}</div>
+    <div class="pw-svg">${wheelSvg(w)}</div>
+    <div class="pw-spheres">${spheresHtml}</div>
+  `;
+  setTimeout(()=>window.print(), 50);
 }
 
 function setSphereScore(sid, v){
