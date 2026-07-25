@@ -188,7 +188,7 @@
     justify-content: center; transition: .15s; font-size: 12px; color: transparent;
   }
   .ms.done .check { background: var(--teal); border-color: var(--teal); color: #06241d; }
-  .ms .txt { flex: 1; font-size: 14px; background: transparent; border: 1px solid transparent; padding: 3px 6px; border-radius: 6px; color: var(--text); font-family: inherit; }
+  .ms .txt { flex: 1; font-size: 14px; background: transparent; border: 1px solid transparent; padding: 3px 6px; border-radius: 6px; color: var(--text); font-family: inherit; white-space: pre-wrap; word-break: break-word; resize: none; overflow: hidden; line-height: 1.4; }
   .ms .txt:hover, .ms .txt:focus { border-color: var(--line); background: var(--panel); }
   .ms.done .txt { color: var(--text-faint); text-decoration: line-through; }
   .ms-add { display: flex; gap: 8px; margin-top: 8px; }
@@ -647,6 +647,7 @@
   .task.is-done .tcheck { background: var(--teal); border-color: var(--teal); color: #06241d; }
   .task.is-done .tx { text-decoration: line-through; color: var(--text-dim); }
   .task .tag { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+  .task .tnote { font-size: 12px; color: var(--text-dim); margin-top: 4px; white-space: pre-wrap; word-break: break-word; line-height: 1.4; }
   .task .tmove { display: flex; gap: 2px; flex: none; }
   .task .marrow {
     width: 24px; height: 24px; border: 1px solid var(--line); background: var(--ink-soft);
@@ -1545,6 +1546,7 @@
   <div class="modal">
     <h3 class="display" id="tm-title">Задача</h3>
     <label class="fld"><span>Текст задачи</span><input type="text" id="tm-text" placeholder="Что нужно сделать"></label>
+    <label class="fld"><span>Заметка (необязательно)</span><textarea id="tm-note" rows="2" placeholder="Подробности, детали"></textarea></label>
     <div style="display:flex;gap:10px">
       <label class="fld" style="flex:1"><span>Дедлайн (необязательно)</span><input type="date" id="tm-due"></label>
       <label class="fld" style="flex:1"><span>Время (необязательно)</span><input type="time" id="tm-duetime"></label>
@@ -2192,6 +2194,8 @@ window.onAuthChange = async function(user) {
         if(!h.created){ const first=Object.keys(h.log||{}).sort()[0]; h.created = first || todayKey(); }
         if(typeof h.emoji==='undefined') h.emoji='';
       });
+      // backfill new task field (note) for older saves
+      (data.tasks||[]).forEach(t=>{ if(typeof t.note==='undefined') t.note=''; });
     } catch (e) {
       console.error(e); toast('Не удалось загрузить данные'); data = blankData();
     }
@@ -2235,6 +2239,7 @@ function switchView(v) {
   if (v === 'tasks') renderTasks();
   if (v === 'dump') renderDump();
   if (v === 'wheel') renderWheel();
+  if (v === 'projects') renderProjects();
   if (v === 'wheelArchive') renderWheelArchive();
   if (v === 'projectArchive') renderProjectArchive();
   if (v === 'dreams') renderDreams();
@@ -2527,7 +2532,7 @@ function projectCardHtml(p){
     <div class="milestones">
       ${p.milestones.map(m=>`<div class="ms ${m.done?'done':''}">
         <div class="check" onclick="toggleMilestone('${p.id}','${m.id}')">✓</div>
-        <input class="txt" value="${esc(m.txt)}" onchange="renameMilestone('${p.id}','${m.id}', this.value)">
+        <textarea class="txt" rows="1" oninput="autoGrowTextarea(this)" onchange="renameMilestone('${p.id}','${m.id}', this.value)">${esc(m.txt)}</textarea>
         <button class="icon-btn" onclick="delMilestone('${p.id}','${m.id}')">✕</button>
       </div>`).join('')}
     </div>
@@ -2535,6 +2540,11 @@ function projectCardHtml(p){
       <input type="text" placeholder="Добавить этап и нажать Enter" onkeydown="if(event.key==='Enter'){addMilestone('${p.id}',this); this.value='';}">
     </div>
   </div>`;
+}
+// grows a <textarea> to fit its content — used for milestone/note text so nothing gets clipped
+function autoGrowTextarea(el){
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
 }
 function renderProjects() {
   const wrap = document.getElementById('projects-list');
@@ -2548,24 +2558,25 @@ function renderProjects() {
   if (!folders.length) {
     // no folders defined — flat grid, same as before
     wrap.innerHTML = `<div class="grid">${data.projects.map(projectCardHtml).join('')}</div>`;
-    return;
+  } else {
+    const sections = folders.map(f=>{
+      const projs = data.projects.filter(p=>p.folderId===f.id);
+      if(!projs.length) return '';
+      return `<div class="proj-folder">
+        <div class="proj-folder-head">🗂 ${esc(f.name)} <span class="cnt">${projs.length} ${plural(projs.length,'проект','проекта','проектов')}</span></div>
+        <div class="grid">${projs.map(projectCardHtml).join('')}</div>
+      </div>`;
+    });
+    const unfiled = data.projects.filter(p=>!p.folderId || !folders.some(f=>f.id===p.folderId));
+    if (unfiled.length) {
+      sections.push(`<div class="proj-folder">
+        <div class="proj-folder-head">Без папки <span class="cnt">${unfiled.length} ${plural(unfiled.length,'проект','проекта','проектов')}</span></div>
+        <div class="grid">${unfiled.map(projectCardHtml).join('')}</div>
+      </div>`);
+    }
+    wrap.innerHTML = sections.join('');
   }
-  const sections = folders.map(f=>{
-    const projs = data.projects.filter(p=>p.folderId===f.id);
-    if(!projs.length) return '';
-    return `<div class="proj-folder">
-      <div class="proj-folder-head">🗂 ${esc(f.name)} <span class="cnt">${projs.length} ${plural(projs.length,'проект','проекта','проектов')}</span></div>
-      <div class="grid">${projs.map(projectCardHtml).join('')}</div>
-    </div>`;
-  });
-  const unfiled = data.projects.filter(p=>!p.folderId || !folders.some(f=>f.id===p.folderId));
-  if (unfiled.length) {
-    sections.push(`<div class="proj-folder">
-      <div class="proj-folder-head">Без папки <span class="cnt">${unfiled.length} ${plural(unfiled.length,'проект','проекта','проектов')}</span></div>
-      <div class="grid">${unfiled.map(projectCardHtml).join('')}</div>
-    </div>`);
-  }
-  wrap.innerHTML = sections.join('');
+  wrap.querySelectorAll('.ms .txt').forEach(autoGrowTextarea);
 }
 
 function renderProjectArchive(){
@@ -5692,6 +5703,7 @@ function renderTasks() {
         <div class="tcheck" onclick="toggleTaskDone('${t.id}')">✓</div>
         <div class="tbody">
           <div class="tx">${esc(t.txt)}</div>
+          ${t.note?`<div class="tnote">${esc(t.note)}</div>`:''}
           ${chips?`<div class="tchips">${chips}</div>`:''}
         </div>
         <div class="tmove">
@@ -5750,6 +5762,7 @@ function openTaskModal(id){
   document.getElementById('tm-title').textContent = t.inbox ? 'Распределить задачу' : 'Изменить задачу';
   document.getElementById('tm-save').textContent = t.inbox ? 'Распределить' : 'Сохранить';
   document.getElementById('tm-text').value = t.txt;
+  document.getElementById('tm-note').value = t.note || '';
   document.getElementById('tm-due').value = t.due || '';
   document.getElementById('tm-duetime').value = t.dueTime || '';
   document.getElementById('tm-category').innerHTML = taskCatOptions(t.category||'');
@@ -5766,6 +5779,7 @@ function saveTaskModal(){
   const txt = document.getElementById('tm-text').value.trim();
   if(!txt){ toast('Впиши текст задачи'); return; }
   t.txt = txt;
+  const note = document.getElementById('tm-note').value.trim(); if(note) t.note=note; else delete t.note;
   const due = document.getElementById('tm-due').value; if(due) t.due=due; else delete t.due;
   const dueTime = document.getElementById('tm-duetime').value; if(due && dueTime) t.dueTime=dueTime; else delete t.dueTime;
   const cat = document.getElementById('tm-category').value; if(cat) t.category=cat; else delete t.category;
