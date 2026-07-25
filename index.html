@@ -1031,7 +1031,6 @@
     .coinrules-grid { grid-template-columns: 1fr; }
     .ach-card { flex-wrap: wrap; }
     .ach-action { width: 100%; }
-    .ovcards-list { grid-template-columns: 1fr; }
     .week { justify-content: space-between; }
     .day { flex: 1; }
     .mobile-tabs {
@@ -1070,9 +1069,6 @@
   .secord-btns { display: flex; gap: 4px; }
   .secord-btns .icon-btn { width: 32px; height: 32px; }
   .secord-btns .icon-btn:disabled { opacity: .3; cursor: default; }
-  .ovcards-list { display: grid; grid-template-columns: repeat(2,1fr); gap: 6px; }
-  .ovcard-opt { display: flex; align-items: center; gap: 9px; padding: 8px 10px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 13px; cursor: pointer; }
-  .ovcard-opt input { width: auto; }
 </style>
 </head>
 <body>
@@ -1287,8 +1283,8 @@
       </div>
       <div class="card" style="max-width:520px;margin-bottom:16px">
         <h3 style="font-size:15px;margin-bottom:6px">Карточки на главном</h3>
-        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Выбери, какие карточки показывать на главном экране.</p>
-        <div id="overview-cards-list" class="ovcards-list"></div>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">Меняй порядок стрелками и скрывай ненужные карточки — так же, как разделы меню.</p>
+        <div id="overview-cards-list" class="secord-list"></div>
       </div>
       <div class="card" style="max-width:520px;margin-bottom:16px">
         <h3 style="font-size:15px;margin-bottom:6px">Часовой пояс</h3>
@@ -2188,6 +2184,7 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.settings.ui.sectionOrder)) data.settings.ui.sectionOrder = [];
       if (!Array.isArray(data.settings.ui.overviewHidden)) data.settings.ui.overviewHidden = [];
       if (typeof data.settings.ui.changelogCollapsed !== 'boolean') data.settings.ui.changelogCollapsed = false;
+      if (!Array.isArray(data.settings.ui.overviewWidgets)) data.settings.ui.overviewWidgets = [];
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -3189,23 +3186,54 @@ const OVERVIEW_CARDS = [
   {id:'habits', label:'Привычки сегодня'},{id:'tasks', label:'Задачи'},{id:'projects', label:'Проекты'},
   {id:'day', label:'Оценка дня'},{id:'finance', label:'Финансы'},{id:'coins', label:'Монеты'},
   {id:'meals', label:'Питание'},{id:'wins', label:'Победы'},{id:'dreams', label:'Мечты'},
-  {id:'wheel', label:'Колесо'},{id:'upcoming', label:'Ближайшие дни'}
+  {id:'wheel', label:'Колесо'},
+  {id:'habitStreak', label:'Серия привычек'},
+  {id:'deadline', label:'Ближайший дедлайн'},
+  {id:'topCategory', label:'Топ-категория трат'},
+  {id:'coinsWeek', label:'Монеты за неделю'},
+  {id:'lastWin', label:'Последняя победа'},
+  {id:'topProject', label:'Топ-проект'},
+  {id:'tasksWeek', label:'Задачи за неделю'},
+  {id:'achReady', label:'Готово к получению'},
+  {id:'accBalance', label:'Баланс по счетам'},
+  {id:'weekMood', label:'Настроение недели'},
+  {id:'upcoming', label:'Ближайшие дни'}
 ];
+// full catalog in custom order (mirrors orderedSections() for the nav menu)
+function overviewOrderedCards(){
+  const order = uiSettings().overviewWidgets;
+  const known = OVERVIEW_CARDS.map(c=>c.id);
+  let ids = (order&&order.length) ? order.filter(id=>known.includes(id)) : known.slice();
+  known.forEach(id=>{ if(!ids.includes(id)) ids.push(id); });
+  return ids.map(id=>OVERVIEW_CARDS.find(c=>c.id===id));
+}
+function moveOverviewCard(i, dir){
+  const ids = overviewOrderedCards().map(c=>c.id);
+  const j = i+dir;
+  if(j<0||j>=ids.length) return;
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  uiSettings().overviewWidgets = ids;
+  save(); renderOverviewCardsList(); renderOverview();
+}
 function renderOverviewCardsList(){
   const box = document.getElementById('overview-cards-list');
   if(!box) return;
-  const hidden = uiSettings().overviewHidden||[];
-  box.innerHTML = OVERVIEW_CARDS.map(c=>`<label class="ovcard-opt">
-    <input type="checkbox" ${hidden.includes(c.id)?'':'checked'} onchange="toggleOverviewCard('${c.id}', this.checked)">
-    <span>${c.label}</span>
-  </label>`).join('');
+  const cards = overviewOrderedCards();
+  box.innerHTML = cards.map((c,i)=>`<div class="secord-row ${ovCardHidden(c.id)?'hidden-sec':''}">
+    <span class="secord-name">${c.label}</span>
+    <div class="secord-btns">
+      <button class="icon-btn" ${i===0?'disabled':''} onclick="moveOverviewCard(${i},-1)">↑</button>
+      <button class="icon-btn" ${i===cards.length-1?'disabled':''} onclick="moveOverviewCard(${i},1)">↓</button>
+      <button class="icon-btn" onclick="toggleOverviewCard('${c.id}', ${ovCardHidden(c.id)})" title="${ovCardHidden(c.id)?'Показать':'Скрыть'}">${ovCardHidden(c.id)?'🚫':'👁'}</button>
+    </div>
+  </div>`).join('');
 }
 function toggleOverviewCard(id, on){
   const hidden = uiSettings().overviewHidden;
   const idx = hidden.indexOf(id);
   if(on){ if(idx>=0) hidden.splice(idx,1); }
   else { if(idx<0) hidden.push(id); }
-  save(); renderOverview();
+  save(); renderOverview(); renderOverviewCardsList();
 }
 function ovCardHidden(id){ return (uiSettings().overviewHidden||[]).includes(id); }
 
@@ -6559,10 +6587,89 @@ function renderOverview() {
   const coinsCard = card('coins', (coinImage()?`<img src="${coinImage()}" class="coin-img" style="width:16px;height:16px;vertical-align:-3px"> Монеты`:'🪙 Монеты'),
     `<div class="ov-big" style="color:${coinBal<0?'var(--rose)':'var(--amber)'}">${coinBal}</div><div class="ov-note">${coinBal<0?'в минусе — удовольствие в долг ⚠':'монет на балансе'}</div>`);
 
-  // assemble cards respecting visibility settings
-  const cardMap = { habits:habitsCard, tasks:tasksCard, projects:projCard, day:dayCard, finance:finCard, coins:coinsCard, meals:mealCard, wins:winsCard, dreams:dreamsCard, wheel:wheelCard };
-  const gridCards = OVERVIEW_CARDS.filter(c=>c.id!=='upcoming' && !ovCardHidden(c.id)).map(c=>cardMap[c.id]||'').join('');
-  const showUpcoming = !ovCardHidden('upcoming');
+  // habit streak card — best CURRENT streak across all habits
+  const bestHabit = data.habits.length ? data.habits.slice().sort((a,b)=>currentStreak(b)-currentStreak(a))[0] : null;
+  const bestHabitStreakVal = bestHabit ? currentStreak(bestHabit) : 0;
+  const habitStreakCard = card('habits', '🔥 Серия привычек',
+    bestHabitStreakVal>0
+      ? `<div class="ov-big">${bestHabitStreakVal}<span> ${plural(bestHabitStreakVal,'день','дня','дней')}</span></div><div class="ov-note">${esc(bestHabit.name)}</div>`
+      : `<div class="ov-empty">Нет активных серий</div>`);
+
+  // nearest deadline card
+  const nextDeadline = data.tasks.filter(t=>t.due && t.due>=tk && t.col!=='done' && !t.inbox).sort((a,b)=>a.due<b.due?-1:1)[0];
+  const deadlineCard = card('tasks', '⏰ Ближайший дедлайн',
+    nextDeadline
+      ? `<div class="ov-big">${daysBetween(tk,nextDeadline.due)}<span> дн.</span></div><div class="ov-note">${esc(nextDeadline.txt.slice(0,60))}</div>`
+      : `<div class="ov-empty">Нет задач со сроком</div>`);
+
+  // top spending category this month
+  const catSumOv = {};
+  opsInMonth().filter(o=>o.type==='expense').forEach(o=>{ const c=o.category||'Другое'; catSumOv[c]=(catSumOv[c]||0)+o.amount; });
+  const topCatEntry = Object.entries(catSumOv).sort((a,b)=>b[1]-a[1])[0];
+  const topCatCard = card('finance', '📊 Топ-категория трат',
+    topCatEntry
+      ? `<div class="ov-big" style="font-size:22px">${esc(topCatEntry[0])}</div><div class="ov-note">${fmtMoney(topCatEntry[1])} в этом месяце</div>`
+      : `<div class="ov-empty">Нет расходов в этом месяце</div>`);
+
+  // net coins earned/spent over the last 7 days
+  const weekAgoTs = Date.now() - 7*86400000;
+  const coinsWeek = coins().ledger.filter(e=>e.created>=weekAgoTs).reduce((a,e)=>a+e.amount,0);
+  const coinsWeekCard = card('coins', '🪙 Монеты за неделю',
+    `<div class="ov-big" style="color:${coinsWeek<0?'var(--rose)':'var(--teal)'}">${coinsWeek>0?'+':''}${coinsWeek}</div><div class="ov-note">за последние 7 дней</div>`);
+
+  // most recent win
+  const lastWin = data.wins.slice().sort((a,b)=>(b.created||0)-(a.created||0))[0];
+  const lastWinCard = card('wins', '🏆 Последняя победа',
+    lastWin
+      ? `<div class="ov-note" style="font-size:14px;color:var(--text)">${esc(lastWin.weakness)}</div><div class="ov-note">${new Date(lastWin.date+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'})}</div>`
+      : `<div class="ov-empty">Нет побед пока</div>`);
+
+  // project closest to completion
+  const topProjEntry = data.projects.map(p=>({p, pct:projectPct(p)})).sort((a,b)=>b.pct-a.pct)[0];
+  const topProjectCard = card('projects', '📁 Топ-проект',
+    topProjEntry
+      ? `<div class="ov-big">${topProjEntry.pct}<span>%</span></div><div class="ov-note">${esc(topProjEntry.p.name)}</div>`
+      : `<div class="ov-empty">Нет проектов</div>`);
+
+  // tasks completed in the last 7 days
+  const weekAgoKey = addDaysKey(tk,-6);
+  const tasksWeek = data.tasks.filter(t=>t.col==='done' && t.doneAt && doneDateKey(t)>=weekAgoKey).length;
+  const tasksWeekCard = card('tasks', '✅ Задачи за неделю',
+    `<div class="ov-big">${tasksWeek}</div><div class="ov-note">выполнено за 7 дней</div>`);
+
+  // achievements ready to claim
+  const achReady = achievementsSummary().ready;
+  const achReadyCard = card('achievements', '🏅 Готово к получению',
+    achReady>0
+      ? `<div class="ov-big" style="color:var(--amber)">${achReady}</div><div class="ov-note">${plural(achReady,'достижение','достижения','достижений')} ждут — забери!</div>`
+      : `<div class="ov-empty">Пока нечего забирать</div>`);
+
+  // total balance across all finance accounts
+  const accList = data.finance.accounts||[];
+  const totalAccBalance = accList.reduce((s,a)=>s+accountBalance(a.id),0);
+  const accBalanceCard = card('finance', '💰 Баланс по счетам',
+    `<div class="ov-big" style="color:${totalAccBalance<0?'var(--rose)':'var(--teal)'}">${fmtMoney(totalAccBalance)}</div><div class="ov-note">${accList.length} ${plural(accList.length,'счёт','счёта','счетов')}</div>`);
+
+  // average day rating over the last 7 days
+  const last7 = Array.from({length:7},(_,i)=>addDaysKey(tk,-i));
+  const scoresWeek = last7.map(k=>data.days[k]&&data.days[k].score).filter(s=>s>0);
+  const avgMood = scoresWeek.length ? scoresWeek.reduce((a,b)=>a+b,0)/scoresWeek.length : 0;
+  const weekMoodCard = card('journal', '📈 Настроение недели',
+    scoresWeek.length
+      ? `<div class="ov-big" style="color:${scoreBigColor(Math.round(avgMood))}">${avgMood.toFixed(1)}<span>/10</span></div><div class="ov-note">среднее за ${scoresWeek.length} ${plural(scoresWeek.length,'день','дня','дней')}</div>`
+      : `<div class="ov-empty">Оцени пару дней →</div>`);
+
+  // assemble cards respecting order + visibility settings
+  const cardMap = {
+    habits:habitsCard, tasks:tasksCard, projects:projCard, day:dayCard, finance:finCard, coins:coinsCard,
+    meals:mealCard, wins:winsCard, dreams:dreamsCard, wheel:wheelCard,
+    habitStreak:habitStreakCard, deadline:deadlineCard, topCategory:topCatCard, coinsWeek:coinsWeekCard,
+    lastWin:lastWinCard, topProject:topProjectCard, tasksWeek:tasksWeekCard, achReady:achReadyCard,
+    accBalance:accBalanceCard, weekMood:weekMoodCard
+  };
+  const orderedIds = overviewOrderedCards().map(c=>c.id).filter(id=>!ovCardHidden(id));
+  const gridCards = orderedIds.filter(id=>id!=='upcoming').map(id=>cardMap[id]||'').join('');
+  const showUpcoming = orderedIds.includes('upcoming');
 
   box.innerHTML = `<div class="ov-grid">
     ${gridCards}
