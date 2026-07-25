@@ -945,6 +945,22 @@
   .mobile-tabs { display: none; }
 
   /* ---------- Login ---------- */
+  #maintenance-banner {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 150;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--amber); color: #2a1c05; font-size: 13.5px; font-weight: 600;
+    padding: 10px 44px 10px 16px; text-align: center; line-height: 1.4;
+    box-shadow: 0 2px 10px rgba(0,0,0,.25);
+  }
+  #maintenance-banner button {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: #2a1c05; font-size: 16px; cursor: pointer;
+    padding: 4px 8px; opacity: .7; line-height: 1;
+  }
+  #maintenance-banner button:hover { opacity: 1; }
+  /* pushes the sticky topbar and layout down so the banner doesn't cover them */
+  body.has-maintenance-banner #app-wrap { padding-top: 42px; }
+  body.has-maintenance-banner .topbar { top: 42px; }
   #login-screen {
     position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
     padding: 24px; z-index: 100;
@@ -1054,6 +1070,12 @@
 </style>
 </head>
 <body>
+
+<!-- MAINTENANCE BANNER: toggled by the MAINTENANCE constant near the top of the main script block below -->
+<div id="maintenance-banner" style="display:none">
+  <span id="maintenance-text"></span>
+  <button onclick="dismissMaintenanceBanner()" title="Закрыть">✕</button>
+</div>
 
 <!-- LOGIN SCREEN -->
 <div id="login-screen">
@@ -2004,6 +2026,23 @@
 <div id="toast"></div>
 
 <script>
+/* ============ MAINTENANCE BANNER ============ */
+// to show a top banner on the site: set active:true, edit message if needed, commit+push. Set back to false to hide it.
+const MAINTENANCE = { active: false, message: 'Идут технические работы, скоро всё заработает' };
+function initMaintenanceBanner(){
+  if (!MAINTENANCE.active) return;
+  if (sessionStorage.getItem('maintenanceBannerDismissed') === '1') return;
+  document.getElementById('maintenance-text').textContent = MAINTENANCE.message;
+  document.getElementById('maintenance-banner').style.display = 'flex';
+  document.body.classList.add('has-maintenance-banner');
+}
+function dismissMaintenanceBanner(){
+  sessionStorage.setItem('maintenanceBannerDismissed', '1');
+  document.getElementById('maintenance-banner').style.display = 'none';
+  document.body.classList.remove('has-maintenance-banner');
+}
+initMaintenanceBanner();
+
 /* ============ STORAGE (Firebase Cloud) ============ */
 let data = { projects: [], projectArchive: [], projectFolders: [], habits: [], tasks: [], dump: [], dreams: [], days: {}, customReasons: [], wins: [], customWeaknesses: [], finance: { budget: 0, categories: ['Еда','Транспорт','Развлечения','Учёба','Спорт','Здоровье','Одежда','Подарки','Подписки','Непредвиденное','Другое'], subcategories: {}, catBudgets: {}, operations: [], accounts: [{ id:'acc_default', name:'Основной', startBalance:0, budget:0, created: Date.now() }] }, meals: { plan: {}, library: [], goals: { calories:0, protein:0, fat:0, carbs:0, budget:0 } }, coins: { ledger: [], rules: { habit:5, win:10, task:5, noOvereat:15, weekClean:100, dayBudget:10, weekBudget:70 }, rewards: [] }, events: [], wheel: null, wheelArchive: [], settings: { timezone: 'Europe/Moscow' }, created: Date.now() };
 let currentUser = null;
