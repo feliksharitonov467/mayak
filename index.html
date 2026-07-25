@@ -2173,6 +2173,7 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.coins.customAchievements)) data.coins.customAchievements = [];
       if (!data.coins.achProgress || typeof data.coins.achProgress !== 'object') data.coins.achProgress = {};
       if (!data.coins.achOverrides || typeof data.coins.achOverrides !== 'object') data.coins.achOverrides = {};
+      if (!Array.isArray(data.coins.achHidden)) data.coins.achHidden = [];
       if (typeof data.coins.symbol !== 'string' || !data.coins.symbol) data.coins.symbol = '🪙';
       if (typeof data.coins.image !== 'string') data.coins.image = '';
       // default to the built-in Cheburashka coin unless the user already customized
@@ -4494,7 +4495,7 @@ function achBump(id, delta){
   save(); renderAchievements();
 }
 function achievementsSummary(){
-  const active = allAchievements().filter(a=>!achState(a).claimed);
+  const active = allAchievements().filter(a=>!achState(a).claimed && !isAchHidden(a.id));
   let ready=0; active.forEach(a=>{ if(achState(a).done) ready++; });
   const claimedCount = Object.keys(data.coins.achievements).length;
   return { active: active.length, ready, claimed: claimedCount, total: allAchievements().length };
@@ -4561,27 +4562,49 @@ function saveAch(){
   save(); closeModal('ach-modal'); renderAchievements();
   toast('Достижение сохранено');
 }
+// deletes a custom achievement outright — callable both from the list row and the edit modal
+function deleteCustomAchievement(id){
+  const idx = data.coins.customAchievements.findIndex(a=>a.id===id);
+  if(idx<0) return;
+  const removed = data.coins.customAchievements[idx];
+  const removedClaim = data.coins.achievements[id];
+  const removedProgress = data.coins.achProgress[id];
+  data.coins.customAchievements.splice(idx,1);
+  delete data.coins.achievements[id];
+  delete data.coins.achProgress[id];
+  save(); renderAchievements();
+  toastUndo('Достижение удалено', ()=>{
+    data.coins.customAchievements.splice(idx,0,removed);
+    if(removedClaim!==undefined) data.coins.achievements[id]=removedClaim;
+    if(removedProgress!==undefined) data.coins.achProgress[id]=removedProgress;
+    save(); renderAchievements();
+  });
+}
+// built-in achievements can't be deleted (they're baked into the code) — hide them from the list instead
+function isAchHidden(id){ return (data.coins.achHidden||[]).includes(id); }
+function hideAchievement(id){
+  const a = allAchievements().find(x=>x.id===id); if(!a) return;
+  if(!Array.isArray(data.coins.achHidden)) data.coins.achHidden = [];
+  if(data.coins.achHidden.includes(id)) return;
+  data.coins.achHidden.push(id);
+  save(); renderAchievements();
+  toastUndo(`Скрыто: ${a.title}`, ()=>{
+    data.coins.achHidden = data.coins.achHidden.filter(x=>x!==id);
+    save(); renderAchievements();
+  });
+}
+function unhideAchievement(id){
+  data.coins.achHidden = (data.coins.achHidden||[]).filter(x=>x!==id);
+  save(); renderAchievements();
+}
 function deleteAchFromModal(){
   if(!editingAchId) return;
   const isCustom = String(editingAchId).startsWith('custom_');
-  const id = editingAchId;
   if(isCustom){
-    const idx = data.coins.customAchievements.findIndex(a=>a.id===id);
-    if(idx<0) return;
-    const removed = data.coins.customAchievements[idx];
-    const removedClaim = data.coins.achievements[id];
-    const removedProgress = data.coins.achProgress[id];
-    data.coins.customAchievements.splice(idx,1);
-    delete data.coins.achievements[id];
-    delete data.coins.achProgress[id];
-    save(); closeModal('ach-modal'); renderAchievements();
-    toastUndo('Достижение удалено', ()=>{
-      data.coins.customAchievements.splice(idx,0,removed);
-      if(removedClaim!==undefined) data.coins.achievements[id]=removedClaim;
-      if(removedProgress!==undefined) data.coins.achProgress[id]=removedProgress;
-      save(); renderAchievements();
-    });
+    deleteCustomAchievement(editingAchId);
+    closeModal('ach-modal');
   } else {
+    const id = editingAchId;
     const prevOverride = data.coins.achOverrides[id];
     delete data.coins.achOverrides[id];
     save(); closeModal('ach-modal'); renderAchievements();
@@ -4639,7 +4662,7 @@ function renderAchievements(){
   try {
     const sum = achievementsSummary();
     const sym = coinSymbol();
-    const active = allAchievements().filter(a=>!achState(a).claimed);
+    const active = allAchievements().filter(a=>!achState(a).claimed && !isAchHidden(a.id));
     const rows = active.length ? active.map(a=>{
       const st = achState(a);
       const isCustom = String(a.id).startsWith('custom_');
@@ -4653,16 +4676,30 @@ function renderAchievements(){
       } else {
         action = `<span class="ach-prog-n">${st.rawCur} / ${a.goal}</span>`;
       }
+      const removeIcon = isCustom
+        ? `<span class="ach-edit" onclick="deleteCustomAchievement('${a.id}')" title="Удалить">✕</span>`
+        : `<span class="ach-edit" onclick="hideAchievement('${a.id}')" title="Скрыть">🙈</span>`;
       return `<div class="ach-card ${cls}">
         <div class="ach-icon">${a.icon}</div>
         <div class="ach-main">
-          <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''} <span class="ach-edit" onclick="openAchModal('${a.id}')">✎</span></div>
+          <div class="ach-title">${esc(a.title)} ${st.done?'<span class=\"ach-check\">✓</span>':''} <span class="ach-edit" onclick="openAchModal('${a.id}')">✎</span> ${removeIcon}</div>
           <div class="ach-desc">${esc(a.desc||'')}</div>
           <div class="ach-bar"><i style="width:${st.pct}%"></i></div>
         </div>
         <div class="ach-action">${action}</div>
       </div>`;
     }).join('') : `<div class="wf-none">Активных достижений нет. Создай своё или импортируй.</div>`;
+
+    const hiddenIds = data.coins.achHidden||[];
+    const hiddenList = hiddenIds.map(id=>ACHIEVEMENTS.find(a=>a.id===id)).filter(Boolean);
+    const hiddenHtml = hiddenList.length ? `<div class="chart-wrap" style="margin-top:22px">
+      <h3>🙈 Скрытые достижения</h3>
+      <div class="ach-journal">${hiddenList.map(a=>`<div class="ach-journal-row">
+        <span class="ach-journal-check">${a.icon}</span>
+        <span class="ach-journal-title">${esc(a.title)}</span>
+        <button class="btn btn-ghost btn-sm" onclick="unhideAchievement('${a.id}')">Вернуть</button>
+      </div>`).join('')}</div>
+    </div>` : '';
 
     const claimedList = Object.entries(data.coins.achievements||{})
       .map(([id,rec])=>({id, ...rec}))
@@ -4689,6 +4726,7 @@ function renderAchievements(){
         <h3>🏅 Журнал достижений</h3>
         <div class="ach-journal">${journalHtml}</div>
       </div>
+      ${hiddenHtml}
     `;
   } catch(err){
     // never leave the page blank — show controls + a hint
