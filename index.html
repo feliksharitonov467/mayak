@@ -3352,9 +3352,15 @@ function saveOp(){
 }
 function deleteOpFromModal(){
   if(!editingOpId) return;
-  if(!confirm('Удалить операцию?')) return;
-  fin().operations = fin().operations.filter(o=>o.id!==editingOpId);
+  const idx = fin().operations.findIndex(o=>o.id===editingOpId);
+  if(idx<0) return;
+  const removed = fin().operations[idx];
+  fin().operations.splice(idx,1);
   save(); closeModal('op-modal'); renderFinance();
+  toastUndo('Операция удалена', ()=>{
+    fin().operations.splice(idx,0,removed);
+    save(); renderFinance();
+  });
 }
 
 function toggleFinSelectMode(){
@@ -3377,12 +3383,17 @@ function finClearSelection(){
 }
 function finDeleteSelected(){
   if(!finSelectedOps.size) return;
-  if(!confirm(`Удалить выбранные операции (${finSelectedOps.size})? Это нельзя отменить.`)) return;
-  fin().operations = fin().operations.filter(o=>!finSelectedOps.has(o.id));
+  const ops = fin().operations;
+  const removed = []; // {index, item}, ascending by original index
+  for(let i=ops.length-1;i>=0;i--){ if(finSelectedOps.has(ops[i].id)){ removed.unshift({index:i, item:ops[i]}); ops.splice(i,1); } }
+  const count = removed.length;
   finSelectedOps.clear();
   finSelectMode = false;
   save(); renderFinance();
-  toast('Операции удалены');
+  toastUndo(`Удалено операций: ${count}`, ()=>{
+    removed.forEach(r=>{ fin().operations.splice(r.index,0,r.item); });
+    save(); renderFinance();
+  });
 }
 
 
@@ -3432,10 +3443,18 @@ function renameFinCategory(i, val){
 function removeFinCategory(i){
   const f = fin();
   const c = f.categories[i];
-  if(!confirm(`Удалить категорию «${c}»? Операции с ней останутся (с этим названием), но её не будет в списке.`)) return;
+  if(c===undefined) return;
+  const removedSubs = f.subcategories[c];
+  const removedBudget = f.catBudgets[c];
   f.categories.splice(i,1);
   delete f.subcategories[c]; delete f.catBudgets[c];
   save(); renderFinCats(); renderFinance();
+  toastUndo(`Категория «${c}» удалена`, ()=>{
+    f.categories.splice(i,0,c);
+    if(removedSubs!==undefined) f.subcategories[c]=removedSubs;
+    if(removedBudget!==undefined) f.catBudgets[c]=removedBudget;
+    save(); renderFinCats(); renderFinance();
+  });
 }
 function setCatBudget(cat, val){
   const b = parseFloat(val)||0;
@@ -3493,10 +3512,19 @@ function removeAccount(id){
   if(f.accounts.length<=1){ toast('Должен остаться хотя бы один счёт'); return; }
   const used = f.operations.some(o=>o.account===id || o.fromAccount===id || o.toAccount===id);
   if(used){ toast('У этого счёта есть операции — перенеси или удали их, потом счёт можно будет убрать'); return; }
-  if(!confirm(`Удалить счёт «${accountName(id)}»?`)) return;
-  f.accounts = f.accounts.filter(a=>a.id!==id);
-  if(finAccountFilter===id) finAccountFilter=null;
+  const idx = f.accounts.findIndex(a=>a.id===id);
+  if(idx<0) return;
+  const removed = f.accounts[idx];
+  const name = accountName(id);
+  f.accounts.splice(idx,1);
+  const hadFilter = finAccountFilter===id;
+  if(hadFilter) finAccountFilter=null;
   save(); renderAccountsList(); renderFinance();
+  toastUndo(`Счёт «${name}» удалён`, ()=>{
+    f.accounts.splice(idx,0,removed);
+    if(hadFilter) finAccountFilter=id;
+    save(); renderAccountsList(); renderFinance();
+  });
 }
 
 // ---- Transfers between accounts ----
@@ -3556,9 +3584,15 @@ function saveTransfer(){
 }
 function deleteTransferFromModal(){
   if(!editingTransferId) return;
-  if(!confirm('Удалить перевод?')) return;
-  fin().operations = fin().operations.filter(o=>o.id!==editingTransferId);
+  const idx = fin().operations.findIndex(o=>o.id===editingTransferId);
+  if(idx<0) return;
+  const removed = fin().operations[idx];
+  fin().operations.splice(idx,1);
   save(); closeModal('transfer-modal'); renderFinance();
+  toastUndo('Перевод удалён', ()=>{
+    fin().operations.splice(idx,0,removed);
+    save(); renderFinance();
+  });
 }
 
 // registry of metric labels (must match ALL_METRICS ids in renderFinance)
@@ -4593,10 +4627,17 @@ function saveMealItem(){
 }
 function deleteMealItemFromModal(){
   if(!editingMeal) return;
-  if(!confirm('Удалить эту запись?')) return;
   const p = dayPlan(editingMeal.dateKey);
-  p[editingMeal.mealId] = p[editingMeal.mealId].filter(i=>i.id!==editingMeal.itemId);
+  const arr = p[editingMeal.mealId];
+  const idx = arr.findIndex(i=>i.id===editingMeal.itemId);
+  if(idx<0) return;
+  const removed = arr[idx];
+  arr.splice(idx,1);
   save(); closeModal('meal-modal'); renderMeals();
+  toastUndo('Запись удалена', ()=>{
+    dayPlan(editingMeal.dateKey)[editingMeal.mealId].splice(idx,0,removed);
+    save(); renderMeals();
+  });
 }
 function removeMealItem(mealId, itemId){
   const p = dayPlan(mDate());
@@ -4655,9 +4696,15 @@ function addLibToMeal(libId){
   save(); closeModal('meallib-modal'); renderMeals(); toast('Добавлено');
 }
 function removeLibItem(libId){
-  if(!confirm('Удалить блюдо из библиотеки?')) return;
-  data.meals.library = data.meals.library.filter(x=>x.id!==libId);
+  const idx = data.meals.library.findIndex(x=>x.id===libId);
+  if(idx<0) return;
+  const removed = data.meals.library[idx];
+  data.meals.library.splice(idx,1);
   save(); renderMealLibrary();
+  toastUndo('Блюдо удалено из библиотеки', ()=>{
+    data.meals.library.splice(idx,0,removed);
+    save(); renderMealLibrary();
+  });
 }
 
 function macroLine(sum, goals){
