@@ -193,6 +193,11 @@
   .ms.done .txt { color: var(--text-faint); text-decoration: line-through; }
   .ms-add { display: flex; gap: 8px; margin-top: 8px; }
   .ms-add input { flex: 1; }
+  .card.proj-flash { animation: projFlash 2s ease; }
+  @keyframes projFlash {
+    0%, 100% { box-shadow: none; border-color: var(--line); }
+    15%, 60% { box-shadow: 0 0 0 3px var(--amber); border-color: var(--amber); }
+  }
   .proj-done-banner {
     display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
     background: linear-gradient(90deg, rgba(90,209,184,.12), rgba(90,209,184,.04));
@@ -2244,6 +2249,17 @@ function switchView(v) {
   if (v === 'settings') renderSettings();
   window.scrollTo(0,0);
 }
+// jump to Projects and scroll to/flash a specific project (e.g. from a wheel sphere link)
+function goToProject(id){
+  switchView('projects');
+  setTimeout(()=>{
+    const el = document.querySelector(`[data-project-id="${id}"]`);
+    if(!el) return;
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    el.classList.add('proj-flash');
+    setTimeout(()=>el.classList.remove('proj-flash'), 2000);
+  }, 50);
+}
 document.querySelectorAll('[data-view]').forEach(b => b.onclick = () => switchView(b.dataset.view));
 document.querySelectorAll('[data-action]').forEach(b => b.onclick = () => {
   if (b.dataset.action === 'export') exportData();
@@ -2496,7 +2512,7 @@ function projectCardHtml(p){
          <span>🎉 Все этапы выполнены!</span>
          <button class="btn btn-primary btn-sm" onclick="completeProject('${p.id}')">Отправить в журнал готовых</button>
        </div>` : '';
-  return `<div class="card">
+  return `<div class="card" data-project-id="${p.id}">
     <div class="proj-head">
       <div class="pct">${pct}<span style="font-size:14px">%</span></div>
       <div style="flex:1">
@@ -6061,7 +6077,7 @@ function renderWheel(){
       <div class="gcheck" onclick="toggleSphereGoal('${s.id}','${g.id}')">✓</div>
       <div class="gtx">${esc(g.txt)}</div>
     </div>`).join('');
-    const projHtml = linkedProjects.map(lp=>`<div class="sg proj">
+    const projHtml = linkedProjects.map(lp=>`<div class="sg proj" onclick="goToProject('${lp.id}')" style="cursor:pointer">
       <div class="gcheck" style="cursor:default;${projectPct(lp)===100?'background:var(--teal);border-color:var(--teal);color:#06241d':''}">${projectPct(lp)===100?'✓':''}</div>
       <div class="gtx">${esc(lp.name)}</div>
       <span class="gtag">проект ${projectPct(lp)}%</span>
