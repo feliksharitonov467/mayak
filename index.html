@@ -4023,7 +4023,9 @@ function renderCoinDesign(){
 function coinBalance(){ return coins().ledger.reduce((a,e)=>a+e.amount,0); }
 // add a ledger entry (amount can be + or -). source dedups auto-grants.
 function coinAdd(amount, reason, source){
-  coins().ledger.push({ id: uid(), amount, reason, source: source||'manual', date: todayKey(), created: Date.now() });
+  const entry = { id: uid(), amount, reason, source: source||'manual', date: todayKey(), created: Date.now() };
+  coins().ledger.push(entry);
+  return entry;
 }
 // award once per (source+key+day) — prevents double-granting for the same action
 function coinGrantOnce(sourceKey, amount, reason){
@@ -4147,22 +4149,27 @@ function saveReward(){
 }
 function deleteRewardFromModal(){
   if(!editingRewardId) return;
-  if(!confirm('Удалить награду?')) return;
-  coins().rewards = coins().rewards.filter(r=>r.id!==editingRewardId);
+  const idx = coins().rewards.findIndex(r=>r.id===editingRewardId);
+  if(idx<0) return;
+  const removed = coins().rewards[idx];
+  coins().rewards.splice(idx,1);
   save(); closeModal('reward-modal'); renderCoins();
+  toastUndo('Награда удалена', ()=>{
+    coins().rewards.splice(idx,0,removed);
+    save(); renderCoins();
+  });
 }
 // spend coins on a reward — allowed even into negative (pleasure "on credit")
 function spendReward(id){
   const r = coins().rewards.find(x=>x.id===id); if(!r) return;
   const bal = coinBalance();
   const willBeNegative = (bal - r.cost) < 0;
-  const msg = willBeNegative
-    ? `Потратить ${r.cost} монет на «${r.name}»? Не хватает — баланс уйдёт в минус (удовольствие в долг).`
-    : `Потратить ${r.cost} монет на «${r.name}»?`;
-  if(!confirm(msg)) return;
-  coinAdd(-r.cost, 'Награда: '+r.name, 'reward:'+r.id);
+  const entry = coinAdd(-r.cost, 'Награда: '+r.name, 'reward:'+r.id);
   save(); renderCoins(); renderOverview();
-  toast(willBeNegative?'Взято в долг ⚠':'Награда получена 🎉');
+  toastUndo(willBeNegative?'Взято в долг ⚠ — '+r.name:'Награда получена 🎉 — '+r.name, ()=>{
+    coins().ledger = coins().ledger.filter(e=>e.id!==entry.id);
+    save(); renderCoins(); renderOverview();
+  });
 }
 
 // ---- coin stats for a period ----
@@ -4388,16 +4395,32 @@ function saveAch(){
 function deleteAchFromModal(){
   if(!editingAchId) return;
   const isCustom = String(editingAchId).startsWith('custom_');
+  const id = editingAchId;
   if(isCustom){
-    if(!confirm('Удалить это достижение?')) return;
-    data.coins.customAchievements = data.coins.customAchievements.filter(a=>a.id!==editingAchId);
-    delete data.coins.achievements[editingAchId];
-    delete data.coins.achProgress[editingAchId];
+    const idx = data.coins.customAchievements.findIndex(a=>a.id===id);
+    if(idx<0) return;
+    const removed = data.coins.customAchievements[idx];
+    const removedClaim = data.coins.achievements[id];
+    const removedProgress = data.coins.achProgress[id];
+    data.coins.customAchievements.splice(idx,1);
+    delete data.coins.achievements[id];
+    delete data.coins.achProgress[id];
+    save(); closeModal('ach-modal'); renderAchievements();
+    toastUndo('Достижение удалено', ()=>{
+      data.coins.customAchievements.splice(idx,0,removed);
+      if(removedClaim!==undefined) data.coins.achievements[id]=removedClaim;
+      if(removedProgress!==undefined) data.coins.achProgress[id]=removedProgress;
+      save(); renderAchievements();
+    });
   } else {
-    if(!confirm('Сбросить к стандартному виду?')) return;
-    delete data.coins.achOverrides[editingAchId];
+    const prevOverride = data.coins.achOverrides[id];
+    delete data.coins.achOverrides[id];
+    save(); closeModal('ach-modal'); renderAchievements();
+    toastUndo('Сброшено к стандартному виду', ()=>{
+      if(prevOverride!==undefined) data.coins.achOverrides[id]=prevOverride;
+      save(); renderAchievements();
+    });
   }
-  save(); closeModal('ach-modal'); renderAchievements();
 }
 
 // import custom achievements via JSON (AI-assisted)
@@ -5986,12 +6009,19 @@ function toggleSphereGoal(sid, gid){
   g.done=!g.done; save(); renderWheel();
 }
 function deleteSphere(sid){
-  const s = data.wheel.spheres.find(x=>x.id===sid); if(!s) return;
-  if(!confirm(`Удалить сферу «${s.name}»?`)) return;
-  data.wheel.spheres = data.wheel.spheres.filter(x=>x.id!==sid);
+  const idx = data.wheel.spheres.findIndex(x=>x.id===sid);
+  if(idx<0) return;
+  const removed = data.wheel.spheres[idx];
+  const taggedTaskIds = data.tasks.filter(t=>t.sphereId===sid).map(t=>t.id);
+  data.wheel.spheres.splice(idx,1);
   // untag tasks that pointed to this sphere
   data.tasks.forEach(t=>{ if(t.sphereId===sid) delete t.sphereId; });
   save(); renderWheel(); renderTasks();
+  toastUndo(`Сфера «${removed.name}» удалена`, ()=>{
+    data.wheel.spheres.splice(idx,0,removed);
+    data.tasks.forEach(t=>{ if(taggedTaskIds.includes(t.id)) t.sphereId=sid; });
+    save(); renderWheel(); renderTasks();
+  });
 }
 
 // --- sphere edit modal ---
@@ -6133,9 +6163,15 @@ function wheelSvgMini(w){
   return `<div style="width:150px;height:130px;flex:none">${wheelSvg(w).replace('class="wheel-svg"','style="width:150px;height:130px"')}</div>`;
 }
 function deleteArchivedWheel(id){
-  if(!confirm('Удалить это колесо из истории?')) return;
-  data.wheelArchive = (data.wheelArchive||[]).filter(w=>w.id!==id);
+  const idx = (data.wheelArchive||[]).findIndex(w=>w.id===id);
+  if(idx<0) return;
+  const removed = data.wheelArchive[idx];
+  data.wheelArchive.splice(idx,1);
   save(); renderWheelArchive();
+  toastUndo('Колесо удалено из истории', ()=>{
+    data.wheelArchive.splice(idx,0,removed);
+    save(); renderWheelArchive();
+  });
 }
 
 let dragId = null;
