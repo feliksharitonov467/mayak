@@ -1030,6 +1030,16 @@
   @media (min-width: 821px){
     .mobile-tabs { display: none; }
   }
+  .chlog-list { display: flex; flex-direction: column; gap: 14px; max-height: 360px; overflow-y: auto; }
+  .chlog-ver-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 14px; }
+  .chlog-date { font-size: 11.5px; color: var(--text-faint); }
+  .chlog-changes { display: flex; flex-direction: column; gap: 5px; }
+  .chlog-item { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--text-dim); line-height: 1.4; }
+  .chlog-tag { flex: none; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .3px; padding: 2px 7px; border-radius: 99px; margin-top: 1px; }
+  .chlog-added { background: rgba(90,209,184,.15); color: var(--teal); }
+  .chlog-fixed { background: rgba(230,180,80,.15); color: var(--amber); }
+  .chlog-changed { background: rgba(157,141,241,.15); color: var(--violet); }
+  .chlog-removed { background: rgba(240,120,138,.15); color: var(--rose); }
   .secord-list { display: flex; flex-direction: column; gap: 6px; }
   .secord-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; background: var(--ink-soft); border: 1px solid var(--line); border-radius: 8px; }
   .secord-row.hidden-sec { opacity: .5; }
@@ -1228,6 +1238,14 @@
           <h2 class="display">Настройки</h2>
           <p>Часовой пояс и данные</p>
         </div>
+      </div>
+      <div class="card" style="max-width:520px;margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <h3 style="font-size:15px;margin:0">Что нового</h3>
+          <button class="btn btn-ghost btn-sm" id="changelog-toggle-btn" onclick="toggleChangelog()">Свернуть</button>
+        </div>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">История обновлений трекера.</p>
+        <div id="changelog-body" class="chlog-list"></div>
       </div>
       <div class="card" style="max-width:520px;margin-bottom:16px">
         <h3 style="font-size:15px;margin-bottom:6px">Дизайн монеты <span style="font-size:11px;color:var(--text-faint)">(для разработчика)</span></h3>
@@ -2122,6 +2140,7 @@ window.onAuthChange = async function(user) {
       if (!Array.isArray(data.settings.ui.hidden)) data.settings.ui.hidden = [];
       if (!Array.isArray(data.settings.ui.sectionOrder)) data.settings.ui.sectionOrder = [];
       if (!Array.isArray(data.settings.ui.overviewHidden)) data.settings.ui.overviewHidden = [];
+      if (typeof data.settings.ui.changelogCollapsed !== 'boolean') data.settings.ui.changelogCollapsed = false;
       (data.projects||[]).forEach(p=>{ if(!p.created) p.created = Date.now(); });
       // backfill new habit fields (desc, created) for older saves
       (data.habits||[]).forEach(h=>{
@@ -2927,6 +2946,58 @@ const TIMEZONES = [
   { id:'America/New_York', label:'Нью-Йорк (UTC−5/−4)' },
   { id:'America/Los_Angeles', label:'Лос-Анджелес (UTC−8/−7)' },
 ];
+
+/* ---- Changelog ("Что нового") ---- */
+const CHANGELOG = [
+  { version:'1.8', date:'2026-07-25', changes:[
+    {type:'removed', text:'Полностью убрали window.confirm() — браузер мог молча заблокировать все диалоги подтверждения и сломать удаление.'},
+    {type:'added', text:'Удаление теперь происходит сразу, но с возможностью отменить в течение 6 секунд (тост «Отменить»).'},
+    {type:'added', text:'Отдельное окно подтверждения «Да / Отмена» для по-настоящему необратимых действий — сжечь Ведро целиком и замена всех данных импортом.'},
+  ]},
+  { version:'1.7', date:'2026-07-20', changes:[
+    {type:'added', text:'У событий и задач с дедлайном теперь можно указать конкретное время начала (и окончания у событий).'},
+    {type:'changed', text:'Виды «День» и «Неделя» в Календаре переписаны как почасовая сетка — как в Google/Apple Calendar.'},
+  ]},
+  { version:'1.6', date:'2026-07-09', changes:[
+    {type:'added', text:'Проекты можно раскладывать по папкам.'},
+  ]},
+  { version:'1.5', date:'2026-07-09', changes:[
+    {type:'added', text:'На одну сферу Колеса жизни теперь можно привязать сколько угодно проектов.'},
+    {type:'changed', text:'Этапы проекта стали редактируемыми — раньше текст шага нельзя было изменить после создания.'},
+  ]},
+  { version:'1.4', date:'2026-07-09', changes:[
+    {type:'changed', text:'Бюджет в Финансах теперь задаётся отдельно для каждого счёта, а не один общий на все сразу.'},
+  ]},
+  { version:'1.3', date:'2026-07-09', changes:[
+    {type:'added', text:'В Финансах появилась поддержка нескольких счетов (операционный, инвестиционный и т.д.) с переводами между ними.'},
+  ]},
+  { version:'1.2', date:'2026-07-09', changes:[
+    {type:'added', text:'Массовый выбор и удаление операций в Финансах.'},
+  ]},
+  { version:'1.1', date:'2026-07-08', changes:[
+    {type:'added', text:'Достижения вынесены в отдельную вкладку меню.'},
+    {type:'added', text:'Любое достижение — включая встроенные — теперь можно редактировать.'},
+    {type:'fixed', text:'Убрали белый ободок на монете по умолчанию.'},
+  ]},
+];
+const CHANGELOG_LABELS = { added:'добавлено', fixed:'починено', removed:'убрано', changed:'изменено' };
+function renderChangelog(){
+  const box = document.getElementById('changelog-body');
+  if(!box) return;
+  box.innerHTML = CHANGELOG.map(v=>`<div class="chlog-ver">
+    <div class="chlog-ver-head"><b>v${esc(v.version)}</b><span class="chlog-date">${esc(v.date)}</span></div>
+    <div class="chlog-changes">${v.changes.map(c=>`<div class="chlog-item"><span class="chlog-tag chlog-${c.type}">${CHANGELOG_LABELS[c.type]||c.type}</span><span>${esc(c.text)}</span></div>`).join('')}</div>
+  </div>`).join('');
+  const collapsed = !!uiSettings().changelogCollapsed;
+  box.style.display = collapsed ? 'none' : '';
+  const btn = document.getElementById('changelog-toggle-btn');
+  if(btn) btn.textContent = collapsed ? 'Показать' : 'Свернуть';
+}
+function toggleChangelog(){
+  uiSettings().changelogCollapsed = !uiSettings().changelogCollapsed;
+  save(); renderChangelog();
+}
+
 function renderSettings(){
   const sel = document.getElementById('set-tz');
   if(!sel) return;
@@ -2939,6 +3010,7 @@ function renderSettings(){
   renderCoinDesign();
   renderSectionOrderList();
   renderOverviewCardsList();
+  renderChangelog();
 }
 function updateTzNow(){
   const el = document.getElementById('tz-now'); if(!el) return;
