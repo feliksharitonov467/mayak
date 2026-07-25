@@ -2287,7 +2287,6 @@ function saveProject() {
 // move a finished project to the archive with a stats snapshot
 function completeProject(id){
   const p = data.projects.find(x=>x.id===id); if(!p) return;
-  if(!confirm('Отправить проект в журнал готовых? Он уедет из текущих проектов.')) return;
   const total = p.milestones.length;
   const done = p.milestones.filter(m=>m.done).length;
   const started = p.created || Date.now();
@@ -2295,20 +2294,40 @@ function completeProject(id){
   const days = Math.max(1, Math.round((finished - started)/86400000));
   const sph = projectSphere(p.id);
   data.projectArchive = data.projectArchive || [];
-  data.projectArchive.push({
+  const archEntry = {
     id: p.id, name: p.name, due: p.due||'',
     milestonesTotal: total, milestonesDone: done,
     startedAt: started, finishedAt: finished, days,
     sphereName: sph ? sph.name : '',
     milestones: p.milestones.map(m=>({txt:m.txt, done:m.done}))
-  });
-  // remove from active and unlink sphere
+  };
+  data.projectArchive.push(archEntry);
+  // remove from active and unlink sphere (remembered for undo)
+  const linkedSphereIds = data.wheel ? data.wheel.spheres.filter(s=>(s.projectIds||[]).includes(id)).map(s=>s.id) : [];
   data.projects = data.projects.filter(x=>x.id!==id);
   if(data.wheel){ data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==id); }); }
   save(); renderProjects(); renderWheel(); renderTasks();
-  toast('Проект в журнале готовых 🎉');
+  toastUndo('Проект в журнале готовых 🎉', ()=>{
+    data.projectArchive = data.projectArchive.filter(a=>a!==archEntry);
+    data.projects.push(p);
+    if(data.wheel) linkedSphereIds.forEach(sid=>{ const s=data.wheel.spheres.find(x=>x.id===sid); if(s){ s.projectIds=s.projectIds||[]; s.projectIds.push(id); } });
+    save(); renderProjects(); renderWheel(); renderTasks();
+  });
 }
-function deleteProject(id){ if(confirm('Удалить проект целиком?')){ data.projects = data.projects.filter(p=>p.id!==id); if(data.wheel){ data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==id); }); } save(); renderProjects(); renderWheel(); renderTasks(); } }
+function deleteProject(id){
+  const idx = data.projects.findIndex(p=>p.id===id);
+  if(idx<0) return;
+  const removed = data.projects[idx];
+  const linkedSphereIds = data.wheel ? data.wheel.spheres.filter(s=>(s.projectIds||[]).includes(id)).map(s=>s.id) : [];
+  data.projects.splice(idx,1);
+  if(data.wheel){ data.wheel.spheres.forEach(s=>{ s.projectIds = (s.projectIds||[]).filter(pid=>pid!==id); }); }
+  save(); renderProjects(); renderWheel(); renderTasks();
+  toastUndo('Проект удалён', ()=>{
+    data.projects.splice(idx,0,removed);
+    if(data.wheel) linkedSphereIds.forEach(sid=>{ const s=data.wheel.spheres.find(x=>x.id===sid); if(s){ s.projectIds=s.projectIds||[]; s.projectIds.push(id); } });
+    save(); renderProjects(); renderWheel(); renderTasks();
+  });
+}
 
 // ---- project folders ----
 function openFoldersModal(){ renderFoldersList(); document.getElementById('folders-modal').classList.add('open'); }
@@ -2337,10 +2356,18 @@ function renameProjectFolder(id, val){
   f.name = name; save(); renderFoldersList(); renderProjects();
 }
 function removeProjectFolder(id){
-  if(!confirm('Удалить папку? Проекты в ней останутся, просто станут «без папки».')) return;
-  data.projectFolders = (data.projectFolders||[]).filter(f=>f.id!==id);
+  const idx = (data.projectFolders||[]).findIndex(f=>f.id===id);
+  if(idx<0) return;
+  const removed = data.projectFolders[idx];
+  const affectedIds = data.projects.filter(p=>p.folderId===id).map(p=>p.id);
+  data.projectFolders.splice(idx,1);
   data.projects.forEach(p=>{ if(p.folderId===id) p.folderId=''; });
   save(); renderFoldersList(); renderProjects();
+  toastUndo('Папка удалена', ()=>{
+    data.projectFolders.splice(idx,0,removed);
+    data.projects.forEach(p=>{ if(affectedIds.includes(p.id)) p.folderId=id; });
+    save(); renderFoldersList(); renderProjects();
+  });
 }
 function addMilestone(pid, input) {
   const txt = input.value.trim(); if(!txt) return;
@@ -2464,9 +2491,15 @@ function renderProjectArchive(){
   }).join('');
 }
 function deleteArchivedProject(id){
-  if(!confirm('Убрать проект из журнала готовых? Это удалит запись навсегда.')) return;
-  data.projectArchive = (data.projectArchive||[]).filter(a=>a.id!==id);
+  const idx = (data.projectArchive||[]).findIndex(a=>a.id===id);
+  if(idx<0) return;
+  const removed = data.projectArchive[idx];
+  data.projectArchive.splice(idx,1);
   save(); renderProjectArchive(); renderProjects();
+  toastUndo('Запись убрана из журнала', ()=>{
+    data.projectArchive.splice(idx,0,removed);
+    save(); renderProjectArchive(); renderProjects();
+  });
 }
 
 /* ============ DREAMS / GOALS ============ */
@@ -2524,10 +2557,15 @@ function saveDream(){
   save(); closeModal('dream-modal'); renderDreams();
 }
 function deleteDream(id){
-  const d = data.dreams.find(x=>x.id===id); if(!d) return;
-  if(!confirm(`Удалить «${d.name}»?`)) return;
-  data.dreams = data.dreams.filter(x=>x.id!==id);
+  const idx = data.dreams.findIndex(x=>x.id===id);
+  if(idx<0) return;
+  const removed = data.dreams[idx];
+  data.dreams.splice(idx,1);
   save(); renderDreams();
+  toastUndo('Мечта удалена', ()=>{
+    data.dreams.splice(idx,0,removed);
+    save(); renderDreams();
+  });
 }
 function setDreamStatus(id, status){
   const d = data.dreams.find(x=>x.id===id); if(!d) return;
@@ -2536,22 +2574,30 @@ function setDreamStatus(id, status){
 // convert a dream into a project, keeping a link both ways
 function dreamToProject(id){
   const d = data.dreams.find(x=>x.id===id); if(!d) return;
-  if(!confirm(`Превратить «${d.name}» в проект? Мечта останется в списке со статусом «Стало проектом».`)) return;
+  const prevStatus = d.status;
   const proj = { id: uid(), name: d.name, due:'', milestones:[], created: Date.now(), fromDreamId: d.id };
   data.projects.push(proj);
   d.status = 'project'; d.linkedProjectId = proj.id;
   save(); renderDreams(); renderProjects();
-  toast('Создан проект из мечты');
+  toastUndo('Создан проект из мечты', ()=>{
+    data.projects = data.projects.filter(p=>p.id!==proj.id);
+    d.status = prevStatus; d.linkedProjectId = '';
+    save(); renderDreams(); renderProjects();
+  });
 }
 // convert a dream into a task (lands in inbox for distribution)
 function dreamToTask(id){
   const d = data.dreams.find(x=>x.id===id); if(!d) return;
-  if(!confirm(`Превратить «${d.name}» в задачу? Она появится во «Входящих».`)) return;
+  const prevStatus = d.status;
   const t = { id: uid(), txt: d.name, col:'todo', inbox:true, created: Date.now(), fromDreamId: d.id };
   data.tasks.push(t);
   d.status = 'task'; d.linkedTaskId = t.id;
   save(); renderDreams(); renderTasks();
-  toast('Создана задача из мечты (во Входящих)');
+  toastUndo('Создана задача из мечты (во Входящих)', ()=>{
+    data.tasks = data.tasks.filter(x=>x.id!==t.id);
+    d.status = prevStatus; d.linkedTaskId = '';
+    save(); renderDreams(); renderTasks();
+  });
 }
 
 function renderDreams(){
@@ -3031,9 +3077,15 @@ function saveWin(){
   toast('Победа записана 🏆');
 }
 function deleteWin(id){
-  if(!confirm('Удалить эту запись?')) return;
-  data.wins = data.wins.filter(w=>w.id!==id);
+  const idx = data.wins.findIndex(w=>w.id===id);
+  if(idx<0) return;
+  const removed = data.wins[idx];
+  data.wins.splice(idx,1);
   save(); renderWins();
+  toastUndo('Победа удалена', ()=>{
+    data.wins.splice(idx,0,removed);
+    save(); renderWins();
+  });
 }
 // current streak of consecutive days with at least one win
 function winsStreak(){
@@ -5085,9 +5137,15 @@ function saveEvent(){
 }
 function deleteEventFromModal(){
   if(!editingEventId) return;
-  if(!confirm('Удалить событие?')) return;
-  data.events=data.events.filter(e=>e.id!==editingEventId);
+  const idx = data.events.findIndex(e=>e.id===editingEventId);
+  if(idx<0) return;
+  const removed = data.events[idx];
+  data.events.splice(idx,1);
   save(); closeModal('event-modal'); renderCalendar();
+  toastUndo('Событие удалено', ()=>{
+    data.events.splice(idx,0,removed);
+    save(); renderCalendar();
+  });
 }
 
 /* ============ HABITS ============ */
@@ -5142,7 +5200,17 @@ function saveHabit() {
     save(); closeModal('habit-modal'); renderHabits(); toast('Привычка добавлена');
   }
 }
-function deleteHabit(id){ if(confirm('Удалить привычку и её историю?')){ data.habits=data.habits.filter(h=>h.id!==id); save(); closeModal('habit-detail-modal'); renderHabits(); } }
+function deleteHabit(id){
+  const idx = data.habits.findIndex(h=>h.id===id);
+  if(idx<0) return;
+  const removed = data.habits[idx];
+  data.habits.splice(idx,1);
+  save(); closeModal('habit-detail-modal'); renderHabits();
+  toastUndo('Привычка удалена', ()=>{
+    data.habits.splice(idx,0,removed);
+    save(); renderHabits();
+  });
+}
 function toggleDay(hid, dateKey) {
   const h = data.habits.find(x=>x.id===hid);
   const nowOn = !h.log[dateKey];
@@ -5482,9 +5550,15 @@ function saveTaskModal(){
 }
 function deleteTaskFromModal(){
   if(!editingTaskId) return;
-  if(!confirm('Удалить задачу?')) return;
-  data.tasks = data.tasks.filter(t=>t.id!==editingTaskId);
+  const idx = data.tasks.findIndex(t=>t.id===editingTaskId);
+  if(idx<0) return;
+  const removed = data.tasks[idx];
+  data.tasks.splice(idx,1);
   save(); closeModal('task-modal'); renderTasks(); renderLogbook(); renderCalendar();
+  toastUndo('Задача удалена', ()=>{
+    data.tasks.splice(idx,0,removed);
+    save(); renderTasks(); renderLogbook(); renderCalendar();
+  });
 }
 
 // "Колесо" folder inside Tasks: groups projects + sphere-tagged tasks by sphere
