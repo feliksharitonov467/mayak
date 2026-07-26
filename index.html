@@ -621,6 +621,7 @@
   .day.on { background: var(--teal); border-color: var(--teal); color: #06241d; font-weight: 700; }
   .day.future { opacity: .4; cursor: default; }
   .day.future:hover { border-color: var(--line); }
+  .day.sel { box-shadow: 0 0 0 2px var(--amber); border-color: var(--amber); }
   .day .dnum { font-size: 12px; font-weight: 600; }
 
   /* ---------- Kanban ---------- */
@@ -934,6 +935,7 @@
   .hc-cell.before { opacity: .35; }
   .hc-count { position: absolute; bottom: 1px; right: 2px; font-size: 8px; font-weight: 700; color: var(--amber); }
   .hc-cell.on .hc-count { color: #06241d; }
+  .hc-cell.sel { box-shadow: 0 0 0 2px var(--amber); }
   .hd-sub { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
   .hh-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
   .hh-item { font-size: 13px; color: var(--text-dim); padding: 6px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
@@ -5588,7 +5590,7 @@ function bumpHabitDay(hid, dateKey, delta){
   save(); renderHabits();
   // coins: awarded once for the first tap of the day, removed if that first tap gets undone — same rule as regular habits
   if(dateKey===todayKey() && wasOn!==nowOn) coinsOnHabitToggle(hid, nowOn);
-  if(document.getElementById('habit-detail-modal').classList.contains('open')) openHabitDetail(hid);
+  if(document.getElementById('habit-detail-modal').classList.contains('open')) renderHabitDetail(hid);
 }
 function lastNDays(n) {
   const arr = [];
@@ -5620,6 +5622,19 @@ function habitCompletion(h){
   return { total, days, pct: Math.min(100, Math.round(total/days*100)) };
 }
 const WD = ['пн','вт','ср','чт','пт','сб','вс'];
+let habitWeekSelected = {}; // habitId -> date key currently targeted by the -/+ widget (count habits only)
+function selectHabitDay(hid, k){
+  habitWeekSelected[hid] = k;
+  renderHabits();
+}
+function resetHabitDay(hid, k){
+  const h = data.habits.find(x=>x.id===hid); if(!h) return;
+  const wasOn = (h.log[k]||0) > 0;
+  delete h.log[k];
+  save(); renderHabits();
+  if(k===todayKey() && wasOn) coinsOnHabitToggle(hid, false);
+  if(document.getElementById('habit-detail-modal').classList.contains('open')) renderHabitDetail(hid);
+}
 function renderHabits() {
   const wrap = document.getElementById('habits-list');
   if (!data.habits.length) {
@@ -5632,11 +5647,14 @@ function renderHabits() {
     const streak = currentStreak(h), best = bestStreak(h), total = Object.keys(h.log).length;
     const icon = h.emoji ? `<span class="habit-emoji">${h.emoji}</span>` : '';
     const isCount = h.type==='count';
-    const todayCount = h.log[tk]||0;
+    const selectedKey = isCount ? (habitWeekSelected[h.id] || tk) : tk;
+    const selectedCount = h.log[selectedKey]||0;
+    const selectedLabel = selectedKey===tk ? 'сегодня' : new Date(selectedKey+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
     const counterHtml = isCount ? `<div class="ach-manual" style="margin-top:8px">
-        <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${tk}',-1)">−</button>
-        <span class="ach-prog-n">${todayCount}${h.dailyGoal?`/${h.dailyGoal}`:''} сегодня</span>
-        <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${tk}',1)">+</button>
+        <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${selectedKey}',-1)">−</button>
+        <span class="ach-prog-n">${selectedCount}${h.dailyGoal?`/${h.dailyGoal}`:''} · ${selectedLabel}</span>
+        <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${selectedKey}',1)">+</button>
+        ${selectedCount>0?`<button class="icon-btn" title="Отменить этот день" onclick="resetHabitDay('${h.id}','${selectedKey}')">✕</button>`:''}
       </div>` : '';
     return `<div class="habit-row">
       <div class="habit-info">
@@ -5651,8 +5669,10 @@ function renderHabits() {
       </div>
       <div class="week">
         ${days.map(d=>{ const k=localKey(d); const val=h.log[k]; const on=!!val; const fut=k>tk;
+          const sel = isCount && k===selectedKey;
           const title = (isCount && val) ? ` title="${val} раз"` : '';
-          return `<div class="day ${on?'on':''} ${fut?'future':''}"${title} ${fut?'':`onclick="toggleDay('${h.id}','${k}')"`}>
+          const clickHandler = fut ? '' : isCount ? `onclick="selectHabitDay('${h.id}','${k}')"` : `onclick="toggleDay('${h.id}','${k}')"`;
+          return `<div class="day ${on?'on':''} ${fut?'future':''} ${sel?'sel':''}"${title} ${clickHandler}>
             <span style="font-size:9px">${WD[(d.getDay()+6)%7]}</span><span class="dnum">${d.getDate()}</span>
           </div>`; }).join('')}
       </div>
@@ -5662,10 +5682,16 @@ function renderHabits() {
 
 /* ----- Habit detail modal: monthly calendar + all-time stats ----- */
 let habitDetailMonth = null; // {y, m} currently shown month; null = current
+let habitDetailSelected = {}; // habitId -> date key targeted by the -/+ widget in the detail modal (count habits only)
+function selectHabitDetailDay(hid, k){
+  habitDetailSelected[hid] = k;
+  renderHabitDetail(hid);
+}
 
 function openHabitDetail(id){
   const h = data.habits.find(x=>x.id===id); if(!h) return;
   habitDetailMonth = null; // reset to current month each open
+  habitDetailSelected[id] = todayKey();
   renderHabitDetail(id);
   document.getElementById('habit-detail-modal').classList.add('open');
 }
@@ -5686,6 +5712,9 @@ function renderHabitDetail(id){
   const tk = todayKey();
   const createdKey = h.created || (Object.keys(h.log).sort()[0]||tk);
 
+  const isCount = h.type==='count';
+  const selectedKey = habitDetailSelected[h.id] || tk;
+
   // build month grid (Mon-first)
   const first = new Date(view.y, view.m, 1);
   const startOffset = (first.getDay()+6)%7; // days before the 1st
@@ -5698,10 +5727,20 @@ function renderHabitDetail(id){
     const on = !!val;
     const future = k>tk;
     const before = k<createdKey;
-    const cls = on?'on':future?'future':before?'before':'';
-    const countBadge = (h.type==='count' && val) ? `<span class="hc-count">${val}</span>` : '';
-    cells += `<div class="hc-cell ${cls}" ${(!future)?`onclick="toggleDay('${h.id}','${k}')"`:''}>${d}${countBadge}</div>`;
+    const sel = isCount && k===selectedKey;
+    const cls = `${on?'on':future?'future':before?'before':''} ${sel?'sel':''}`;
+    const countBadge = (isCount && val) ? `<span class="hc-count">${val}</span>` : '';
+    const clickHandler = future ? '' : isCount ? `onclick="selectHabitDetailDay('${h.id}','${k}')"` : `onclick="toggleDay('${h.id}','${k}')"`;
+    cells += `<div class="hc-cell ${cls}" ${clickHandler}>${d}${countBadge}</div>`;
   }
+  const selectedCount = h.log[selectedKey]||0;
+  const selectedLabel = selectedKey===tk ? 'сегодня' : new Date(selectedKey+'T00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long'});
+  const detailCounterHtml = isCount ? `<div class="ach-manual" style="margin-top:10px;justify-content:center">
+      <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${selectedKey}',-1)">−</button>
+      <span class="ach-prog-n">${selectedCount}${h.dailyGoal?`/${h.dailyGoal}`:''} · ${selectedLabel}</span>
+      <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${selectedKey}',1)">+</button>
+      ${selectedCount>0?`<button class="icon-btn" title="Отменить этот день" onclick="resetHabitDay('${h.id}','${selectedKey}')">✕</button>`:''}
+    </div>` : '';
 
   // history list (most recent done days)
   const doneDays = Object.keys(h.log).sort().reverse();
@@ -5741,6 +5780,7 @@ function renderHabitDetail(id){
       </div>
       <div class="hc-weekdays">${WD.map(w=>`<div>${w}</div>`).join('')}</div>
       <div class="hc-grid">${cells}</div>
+      ${detailCounterHtml}
     </div>
 
     <div class="hd-history">
