@@ -922,6 +922,7 @@
   .hc-weekdays div { text-align: center; font-size: 10px; color: var(--text-faint); }
   .hc-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 5px; }
   .hc-cell {
+    position: relative;
     aspect-ratio: 1; border-radius: 7px; display: flex; align-items: center; justify-content: center;
     font-size: 12px; color: var(--text-dim); background: var(--ink-soft); border: 1px solid var(--line); cursor: pointer;
     transition: .12s;
@@ -931,6 +932,8 @@
   .hc-cell.on { background: var(--teal); border-color: var(--teal); color: #06241d; font-weight: 700; }
   .hc-cell.future { opacity: .3; cursor: default; }
   .hc-cell.before { opacity: .35; }
+  .hc-count { position: absolute; bottom: 1px; right: 2px; font-size: 8px; font-weight: 700; color: var(--amber); }
+  .hc-cell.on .hc-count { color: #06241d; }
   .hd-sub { font-size: 14px; font-weight: 600; margin-bottom: 10px; }
   .hh-list { max-height: 180px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; }
   .hh-item { font-size: 13px; color: var(--text-dim); padding: 6px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 7px; }
@@ -1953,6 +1956,11 @@
     <h3 class="display" id="hm-title">Новая привычка</h3>
     <label class="fld"><span>Название</span><input type="text" id="hm-name" placeholder="Например, читать 20 минут"></label>
     <label class="fld"><span>Описание (необязательно)</span><input type="text" id="hm-desc" placeholder="Зачем эта привычка / детали"></label>
+    <div class="op-type-toggle">
+      <button type="button" id="hm-type-bool" class="op-type" onclick="setHabitType('bool')">Обычная</button>
+      <button type="button" id="hm-type-count" class="op-type" onclick="setHabitType('count')">Счётчик</button>
+    </div>
+    <label class="fld" id="hm-goal-field" style="display:none"><span>Цель в день (необязательно)</span><input type="number" id="hm-goal" min="1" placeholder="Например, 5"></label>
     <div class="fld">
       <span>Иконка</span>
       <div class="emoji-grid" id="hm-emoji-grid"></div>
@@ -2217,6 +2225,7 @@ window.onAuthChange = async function(user) {
         if(typeof h.desc==='undefined') h.desc='';
         if(!h.created){ const first=Object.keys(h.log||{}).sort()[0]; h.created = first || todayKey(); }
         if(typeof h.emoji==='undefined') h.emoji='';
+        if(h.type!=='count') h.type='bool';
       });
       // backfill new task field (note) for older saves
       (data.tasks||[]).forEach(t=>{ if(typeof t.note==='undefined') t.note=''; });
@@ -5483,6 +5492,14 @@ function deleteEventFromModal(){
 const HABIT_EMOJIS = ['📖','🏃','💧','🧘','💪','✍️','🎸','🌱','☀️','🧠','💤','🥗','🚭','🧹','📱','🙏','🎯','🚿','🥦','⏰','🎨','🧊'];
 let habitDraftEmoji = '';       // currently selected emoji in the modal ('' = no icon)
 let editingHabitId = null;       // null => creating, id => editing
+let habitTypeDraft = 'bool';     // 'bool' | 'count' — currently selected type in the habit modal
+
+function setHabitType(type){
+  habitTypeDraft = type;
+  document.getElementById('hm-type-bool').classList.toggle('on', type==='bool');
+  document.getElementById('hm-type-count').classList.toggle('on', type==='count');
+  document.getElementById('hm-goal-field').style.display = type==='count' ? '' : 'none';
+}
 
 function renderEmojiGrid(){
   const grid = document.getElementById('hm-emoji-grid');
@@ -5500,6 +5517,8 @@ function openHabitModal(){
   document.getElementById('hm-save').textContent = 'Создать';
   document.getElementById('hm-name').value = '';
   document.getElementById('hm-desc').value = '';
+  document.getElementById('hm-goal').value = '';
+  setHabitType('bool');
   renderEmojiGrid();
   document.getElementById('habit-modal').classList.add('open');
   setTimeout(()=>document.getElementById('hm-name').focus(),50);
@@ -5512,6 +5531,8 @@ function openHabitEdit(id){
   document.getElementById('hm-save').textContent = 'Сохранить';
   document.getElementById('hm-name').value = h.name;
   document.getElementById('hm-desc').value = h.desc || '';
+  document.getElementById('hm-goal').value = h.dailyGoal || '';
+  setHabitType(h.type==='count' ? 'count' : 'bool');
   renderEmojiGrid();
   document.getElementById('habit-modal').classList.add('open');
   setTimeout(()=>document.getElementById('hm-name').focus(),50);
@@ -5520,14 +5541,19 @@ function saveHabit() {
   const name = document.getElementById('hm-name').value.trim();
   if (!name) { toast('Впиши название'); return; }
   const desc = document.getElementById('hm-desc').value.trim();
+  const type = habitTypeDraft;
+  const dailyGoal = type==='count' ? (Math.max(0, parseInt(document.getElementById('hm-goal').value,10)||0) || undefined) : undefined;
   if (editingHabitId){
     const h = data.habits.find(x=>x.id===editingHabitId);
-    h.name = name; h.desc = desc; h.emoji = habitDraftEmoji;
+    h.name = name; h.desc = desc; h.emoji = habitDraftEmoji; h.type = type;
+    if(dailyGoal) h.dailyGoal = dailyGoal; else delete h.dailyGoal;
     save(); closeModal('habit-modal'); renderHabits(); toast('Привычка обновлена');
     // if the detail modal is open for this habit, refresh it
     if(document.getElementById('habit-detail-modal').classList.contains('open')) openHabitDetail(editingHabitId);
   } else {
-    data.habits.push({ id: uid(), name, desc, emoji: habitDraftEmoji, log: {}, created: todayKey() });
+    const newHabit = { id: uid(), name, desc, emoji: habitDraftEmoji, type, log: {}, created: todayKey() };
+    if(dailyGoal) newHabit.dailyGoal = dailyGoal;
+    data.habits.push(newHabit);
     save(); closeModal('habit-modal'); renderHabits(); toast('Привычка добавлена');
   }
 }
@@ -5544,11 +5570,24 @@ function deleteHabit(id){
 }
 function toggleDay(hid, dateKey) {
   const h = data.habits.find(x=>x.id===hid);
+  if(h.type==='count'){ bumpHabitDay(hid, dateKey, 1); return; }
   const nowOn = !h.log[dateKey];
   if (h.log[dateKey]) delete h.log[dateKey]; else h.log[dateKey] = true;
   save(); renderHabits();
   // award coins only when toggling TODAY's completion
   if(dateKey===todayKey()) coinsOnHabitToggle(hid, nowOn);
+  if(document.getElementById('habit-detail-modal').classList.contains('open')) openHabitDetail(hid);
+}
+// increments/decrements a count-type habit's tally for a given day (min 0)
+function bumpHabitDay(hid, dateKey, delta){
+  const h = data.habits.find(x=>x.id===hid); if(!h) return;
+  const wasOn = (h.log[dateKey]||0) > 0;
+  const next = Math.max(0, (h.log[dateKey]||0) + delta);
+  if(next<=0) delete h.log[dateKey]; else h.log[dateKey] = next;
+  const nowOn = next > 0;
+  save(); renderHabits();
+  // coins: awarded once for the first tap of the day, removed if that first tap gets undone — same rule as regular habits
+  if(dateKey===todayKey() && wasOn!==nowOn) coinsOnHabitToggle(hid, nowOn);
   if(document.getElementById('habit-detail-modal').classList.contains('open')) openHabitDetail(hid);
 }
 function lastNDays(n) {
@@ -5592,6 +5631,13 @@ function renderHabits() {
   wrap.innerHTML = data.habits.map(h => {
     const streak = currentStreak(h), best = bestStreak(h), total = Object.keys(h.log).length;
     const icon = h.emoji ? `<span class="habit-emoji">${h.emoji}</span>` : '';
+    const isCount = h.type==='count';
+    const todayCount = h.log[tk]||0;
+    const counterHtml = isCount ? `<div class="ach-manual" style="margin-top:8px">
+        <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${tk}',-1)">−</button>
+        <span class="ach-prog-n">${todayCount}${h.dailyGoal?`/${h.dailyGoal}`:''} сегодня</span>
+        <button class="icon-btn" onclick="bumpHabitDay('${h.id}','${tk}',1)">+</button>
+      </div>` : '';
     return `<div class="habit-row">
       <div class="habit-info">
         <h3>${icon}<span class="habit-title" onclick="openHabitDetail('${h.id}')">${esc(h.name)}</span>
@@ -5601,10 +5647,12 @@ function renderHabits() {
         ${h.desc?`<div class="habit-desc">${esc(h.desc)}</div>`:''}
         <div class="streak"><span>🔥 серия: <b>${streak}</b></span><span>рекорд: ${best}</span><span>всего: ${total}</span>
           <span class="habit-open" onclick="openHabitDetail('${h.id}')">открыть →</span></div>
+        ${counterHtml}
       </div>
       <div class="week">
-        ${days.map(d=>{ const k=localKey(d); const on=h.log[k]; const fut=k>tk;
-          return `<div class="day ${on?'on':''} ${fut?'future':''}" ${fut?'':`onclick="toggleDay('${h.id}','${k}')"`}>
+        ${days.map(d=>{ const k=localKey(d); const val=h.log[k]; const on=!!val; const fut=k>tk;
+          const title = (isCount && val) ? ` title="${val} раз"` : '';
+          return `<div class="day ${on?'on':''} ${fut?'future':''}"${title} ${fut?'':`onclick="toggleDay('${h.id}','${k}')"`}>
             <span style="font-size:9px">${WD[(d.getDay()+6)%7]}</span><span class="dnum">${d.getDate()}</span>
           </div>`; }).join('')}
       </div>
@@ -5646,11 +5694,13 @@ function renderHabitDetail(id){
   for(let i=0;i<startOffset;i++) cells += `<div class="hc-cell empty"></div>`;
   for(let d=1; d<=daysInMonth; d++){
     const k = `${view.y}-${String(view.m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const on = h.log[k];
+    const val = h.log[k];
+    const on = !!val;
     const future = k>tk;
     const before = k<createdKey;
     const cls = on?'on':future?'future':before?'before':'';
-    cells += `<div class="hc-cell ${cls}" ${(!future)?`onclick="toggleDay('${h.id}','${k}')"`:''}>${d}</div>`;
+    const countBadge = (h.type==='count' && val) ? `<span class="hc-count">${val}</span>` : '';
+    cells += `<div class="hc-cell ${cls}" ${(!future)?`onclick="toggleDay('${h.id}','${k}')"`:''}>${d}${countBadge}</div>`;
   }
 
   // history list (most recent done days)
